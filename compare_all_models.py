@@ -2,28 +2,33 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import os
 
 
 def load_all_results():
     """Wczytuje wyniki wszystkich modeli"""
     results = {}
 
-    # ANFIS modele
-    with open('results/anfis_2memb_results.json', 'r') as f:
-        results['ANFIS (2 funkcje)'] = json.load(f)
+    result_files = {
+        'ANFIS (2 funkcje)': 'results/anfis_2memb_results.json',
+        'ANFIS (3 funkcje)': 'results/anfis_3memb_results.json',
+        'Neural Network': 'results/nn_results.json',
+        'SVM': 'results/svm_results.json',
+        'Random Forest': 'results/rf_results.json'
+    }
 
-    with open('results/anfis_3memb_results.json', 'r') as f:
-        results['ANFIS (3 funkcje)'] = json.load(f)
+    for name, path in result_files.items():
+        if os.path.exists(path):
+            try:
+                with open(path, 'r') as f:
+                    results[name] = json.load(f)
+            except Exception as e:
+                print(f"⚠ Nie można wczytać {path}: {e}")
+        else:
+            print(f"⚠ Plik {path} nie istnieje - pomijam")
 
-    # Inne modele
-    with open('results/nn_results.json', 'r') as f:
-        results['Neural Network'] = json.load(f)
-
-    with open('results/svm_results.json', 'r') as f:
-        results['SVM'] = json.load(f)
-
-    with open('results/rf_results.json', 'r') as f:
-        results['Random Forest'] = json.load(f)
+    if not results:
+        raise FileNotFoundError("❌ Brak plików z wynikami! Uruchom najpierw train_anfis.py i train_comparison_models.py")
 
     return results
 

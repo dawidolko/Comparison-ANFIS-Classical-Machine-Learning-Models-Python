@@ -1,6 +1,19 @@
+# Deep Learning
 tensorflow==2.17.0
+
+# Data processing
 numpy==1.26.4
 pandas==2.2.3
+
+# Machine Learning
 scikit-learn==1.5.2
+
+# Visualization
 matplotlib==3.9.2
 seaborn==0.12.2
+
+# GUI
+streamlit==1.39.0
+
+# Image processing (dla Streamlit)
+Pillow==10.4.0

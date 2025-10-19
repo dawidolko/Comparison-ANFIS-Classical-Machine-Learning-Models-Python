@@ -67,11 +67,12 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32):
     anfis_model.model.summary()
 
     # Callback do zapisywania najlepszego modelu
-    checkpoint_path = f'models/anfis_best_{n_memb}memb.keras'
+    checkpoint_path = f'models/anfis_best_{n_memb}memb.weights.h5'
     checkpoint = tf.keras.callbacks.ModelCheckpoint(
         checkpoint_path,
         monitor='val_accuracy',
         save_best_only=True,
+        save_weights_only=True,  # Tylko wagi, bez optymalizatora
         mode='max',
         verbose=1
     )
