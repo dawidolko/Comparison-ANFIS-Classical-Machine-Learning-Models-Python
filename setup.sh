@@ -33,7 +33,7 @@ echo "========================================"
 echo "[KROK 1] Uruchamianie projektu..."
 echo "========================================"
 echo ""
-python3 main.py
+
 
 if [ $? -ne 0 ]; then
     echo ""

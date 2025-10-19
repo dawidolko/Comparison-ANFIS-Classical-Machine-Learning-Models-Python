@@ -18,7 +18,6 @@ import tensorflow as tf
 from anfis import ANFISModel
 from scaller import load_scalers
 
-# Konfiguracja strony
 st.set_page_config(
     page_title="ANFIS Wine Quality",
     page_icon="🍷",
@@ -31,10 +30,7 @@ def _load_anfis(weights_path: str,
                 X12: np.ndarray,
                 default_memb: int = 3,
                 verbose: bool = True) -> tuple[float | None, str]:
-    """
-    Próbuj ładować wagi ANFIS i zwróć (prob, debug_info).
-    prob = None -> nieudane, a debug_info powie gdzie poległo.
-    """
+
     info = []
 
     try:
@@ -44,7 +40,6 @@ def _load_anfis(weights_path: str,
 
         info.append(f"[path] OK: {weights_path}")
 
-        # 1) Wykryj (n_input, n_memb) z pliku H5
         n_input = None
         n_memb = None
 
@@ -60,12 +55,10 @@ def _load_anfis(weights_path: str,
 
             info.append(f"[h5] Znalezione datasety 2D: {[(n, s) for n, s in datasets][:6]}{' ...' if len(datasets) > 6 else ''}")
 
-            # spróbuj znaleźć coś z 'centre/center/centres/centers'
             candidates = [(n, s) for n, s in datasets
                           if any(k in n.lower() for k in ("centre", "center", "centres", "centers"))]
 
             if not candidates:
-                # jak nie ma 'centres', weź dataset gdzie JEDEN wymiar to 11 lub 12, a drugi <= 8
                 for n, (a, b) in datasets:
                     if (a in (11, 12) and b <= 8):
                         n_input, n_memb = a, b
@@ -76,7 +69,6 @@ def _load_anfis(weights_path: str,
                         info.append(f"[infer] z {n}: n_input={n_input}, n_memb={n_memb}")
                         break
             else:
-                # preferuj te, które mają wymiar 11/12
                 picked = None
                 for n, (a, b) in candidates:
                     if a in (11, 12) or b in (11, 12):
@@ -85,7 +77,6 @@ def _load_anfis(weights_path: str,
                 if picked is None:
                     picked = candidates[0]
                 n, (a, b) = picked
-                # załóż że większy wymiar = wejścia
                 if a >= b:
                     n_input, n_memb = a, b
                 else:
@@ -101,42 +92,98 @@ def _load_anfis(weights_path: str,
             n_memb = default_memb
 
         info.append(f"[shape] Final: n_input={n_input}, n_memb={n_memb}")
-
-        # 2) Zbuduj model
         try:
             anfis_model = ANFISModel(n_input=int(n_input), n_memb=int(n_memb or default_memb))
         except Exception as e:
             info.append(f"[build] Błąd konstruktora ANFISModel: {e!r}")
             return None, "\n".join(info)
 
-        # Subclassed model: zainicjalizuj graf jednym przejściem
         try:
             dummy = tf.zeros((1, int(n_input)), dtype=tf.float32)
-            _ = anfis_model.model(dummy)  # wywołanie forward
+            _ = anfis_model.model(dummy)
             info.append("[build] Model wywołany na dummy (ok).")
         except Exception as e:
             info.append(f"[build] Błąd przy inicjalizacji grafu: {e!r}")
             return None, "\n".join(info)
 
-        # 3) Ładuj wagi – najpierw by_name (dla legacy H5); jeśli Keras 3 marudzi, fallback bez by_name
         try:
-            anfis_model.model.load_weights(weights_path, by_name=True, skip_mismatch=True)
-            info.append("[weights] load_weights(..., by_name=True, skip_mismatch=True) – OK")
-        except (TypeError, ValueError) as e:
-            info.append(f"[weights] by_name niedostępne ({e!r}) – próbuję bez by_name")
+            import h5py
+
+            with h5py.File(weights_path, "r") as hf:
+                Wf0 = np.array(hf["layers/fuzzy_layer/vars/0"])
+                Wf1 = np.array(hf["layers/fuzzy_layer/vars/1"])
+
+                Wd0 = np.array(hf["layers/defuzz_layer/vars/0"])
+                Wd1 = np.array(hf["layers/defuzz_layer/vars/1"])
+
             try:
-                # Keras 3 wspiera skip_mismatch bez by_name
-                anfis_model.model.load_weights(weights_path, skip_mismatch=True)
-                info.append("[weights] load_weights(..., skip_mismatch=True) – OK (bez by_name)")
-            except Exception as e2:
-                info.append(f"[weights] Fallback bez by_name też padł: {e2!r}")
+                fuzzy = anfis_model.model.get_layer("fuzzy")
+            except Exception:
+                fuzzy = next((lyr for lyr in anfis_model.model.layers
+                              if "fuzzy" in lyr.name.lower()), None)
+            try:
+                defuzz = anfis_model.model.get_layer("defuzz")
+            except Exception:
+                defuzz = next((lyr for lyr in anfis_model.model.layers
+                               if "defuzz" in lyr.name.lower()), None)
+
+            if fuzzy is None:
+                info.append("[weights] Nie znalazłem warstwy 'fuzzy'.")
                 return None, "\n".join(info)
+            if defuzz is None:
+                info.append("[weights] Nie znalazłem warstwy 'defuzz'.")
+                return None, "\n".join(info)
+
+            fuzzy_cur = fuzzy.get_weights()
+            fuzzy_shapes = [w.shape for w in fuzzy_cur]
+            info.append(f"[weights] fuzzy oczekuje: {fuzzy_shapes}")
+            new_fuzzy = None
+            if len(fuzzy_shapes) == 2:
+                if fuzzy_shapes[0] == Wf0.shape and fuzzy_shapes[1] == Wf1.shape:
+                    new_fuzzy = [Wf0, Wf1]
+                elif fuzzy_shapes[0] == Wf1.shape and fuzzy_shapes[1] == Wf0.shape:
+                    new_fuzzy = [Wf1, Wf0]
+            if new_fuzzy is None:
+                info.append("[weights] Nie dopasowałem wag fuzzy (kształty się nie zgadzają).")
+                return None, "\n".join(info)
+            fuzzy.set_weights(new_fuzzy)
+            info.append("[weights] Ustawiono wagi FUZZY.")
+
+            defuzz_cur = defuzz.get_weights()
+            defuzz_shapes = [w.shape for w in defuzz_cur]
+            info.append(f"[weights] defuzz oczekuje: {defuzz_shapes}")
+
+            b_row = Wd0
+            b_vec = Wd0.reshape(-1, )
+            A = Wd1
+            A_T = Wd1.T
+
+            new_defuzz = None
+
+            candidates = [
+                [A, b_vec],
+                [b_vec, A],
+                [A_T, b_vec],
+                [b_vec, A_T],
+            ]
+
+            for cand in candidates:
+                if [w.shape for w in cand] == defuzz_shapes:
+                    new_defuzz = cand
+                    break
+
+            if new_defuzz is None:
+                info.append("[weights] Nie dopasowałem wag defuzz (kształty nie pasują po konwersji).")
+                return None, "\n".join(info)
+
+            defuzz.set_weights(new_defuzz)
+            info.append("[weights] Ustawiono wagi DEFUZZ (A i b dopasowane).")
+
+
         except Exception as e:
-            info.append(f"[weights] Inny błąd load_weights: {e!r}")
+            info.append(f"[weights] Ręczne ładowanie wag z H5 nieudane: {e!r}")
             return None, "\n".join(info)
 
-
-        # 4) Predykcja – wybierz dopasowany wariant i dopilnuj dtype/kształtu
         X = X12 if int(n_input) == 12 else X11
         if not isinstance(X, np.ndarray):
             X = np.asarray(X)
@@ -162,7 +209,6 @@ def _load_anfis(weights_path: str,
 
 
 def load_results():
-    """Wczytuje wyniki wszystkich modeli"""
     results = {}
     result_files = {
         'ANFIS (2 funkcje)': 'results/anfis_2memb_results.json',
@@ -366,7 +412,6 @@ def show_anfis():
 
 
 def show_data_exploration():
-    """Strona z eksploracją danych"""
     st.title("🔍 Eksploracja danych")
     st.markdown("---")
 
@@ -384,7 +429,6 @@ def show_data_exploration():
             img = Image.open('results/correlation_matrix.png')
             st.image(img, use_column_width=True)
 
-    # Pokaż przykładowe dane
     if os.path.exists('data/winequality-red.csv'):
         st.markdown("---")
         st.header("📋 Przykładowe dane")
@@ -438,8 +482,7 @@ def show_prediction():
         if scaler_11 is not None:
             X11_scaled = scaler_11.transform(X11)
         elif scaler_12 is not None:
-            X11_scaled = X12_scaled[:, :11]  # obetnij przeskalowane 12D
-        else:
+            X11_scaled = X12_scaled[:, :11]
             X11_scaled = X11
 
         st.markdown("---")
