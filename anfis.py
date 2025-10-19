@@ -1,164 +1,171 @@
-"""
-ANFIS algorithm based on Gregor Lenhard from University of Basel implementation
-Modified for Wine Quality Classification Project
-
-https://github.com/gregorLen/AnfisTensorflow2.0/blob/master/Models/myanfis.py
-"""
-
+from __future__ import annotations
+from typing import Optional, Tuple
 import tensorflow as tf
-
-class ANFISModel:
-    def __init__(self, n_input, n_memb, batch_size=32):
-        """
-        n_input: liczba cech wejściowych
-        n_memb: liczba funkcji przynależności na cechę
-        batch_size: rozmiar batcha
-        """
-        self.n = n_input
-        self.m = n_memb
-        self.batch_size = batch_size
-
-        input_ = tf.keras.layers.Input(shape=(n_input,), name='inputLayer', batch_size=self.batch_size)
-        L1 = FuzzyLayer(n_input, n_memb, name='fuzzy_layer')(input_)
-        L2 = RuleLayer(n_input, n_memb, name='ruleLayer')(L1)
-        L3 = NormLayer(name='normLayer')(L2)
-        L4 = DefuzzLayer(n_input, n_memb, name='defuzzy_layer')(L3, input_)
-        L5 = SummationLayer(name='sumLayer')(L4)
-
-        self.model = tf.keras.Model(inputs=[input_], outputs=[L5], name='ANFIS_WineQuality')
-        self.update_weights()
-
-    def __call__(self, X):
-        preds = self.model.predict(X, batch_size=self.batch_size, verbose=0)
-        return preds
-
-    def update_weights(self):
-        """Aktualizuje zapisane wagi po treningu"""
-        self.cs, self.sigmas = self.model.get_layer('fuzzy_layer').get_weights()
-        self.bias, self.weights = self.model.get_layer('defuzzy_layer').get_weights()
-
-    def fit(self, X, y, **kwargs):
-        """Trenuje model"""
-        self.init_weights = self.model.get_layer('fuzzy_layer').get_weights()
-        history = self.model.fit(X, y, **kwargs)
-        self.update_weights()
-        tf.keras.backend.clear_session()
-        return history
-
-    def get_membership_functions(self):
-        """Zwraca parametry funkcji przynależności"""
-        return self.cs, self.sigmas
-
+import numpy as np
 
 class FuzzyLayer(tf.keras.layers.Layer):
-    """Warstwa fuzzyfikacji - przekształca wartości na stopnie przynależności"""
-    def __init__(self, n_input, n_memb, **kwargs):
-        super(FuzzyLayer, self).__init__(**kwargs)
-        self.n = n_input
-        self.m = n_memb
+    def __init__(self, n_input: int, n_memb: int, **kwargs):
+        super().__init__(**kwargs)
+        self.n = int(n_input)
+        self.m = int(n_memb)
 
-    def build(self, batch_input_shape):
-        self.batch_size = batch_input_shape[0]
+    def build(self, input_shape):
+        self.c = self.add_weight(
+            name="centres",
+            shape=(self.m, self.n),
+            initializer=tf.keras.initializers.RandomUniform(minval=-1.0, maxval=1.0),
+            trainable=True,
+        )
+        self.log_sigma = self.add_weight(
+            name="log_sigma",
+            shape=(self.m, self.n),
+            initializer=tf.keras.initializers.RandomUniform(minval=-0.2, maxval=0.2),
+            trainable=True,
+        )
+        self.eps = tf.constant(1e-6, dtype=self.dtype or tf.float32)
+        super().build(input_shape)
 
-        # Centra funkcji gaussowskich
-        self.c = self.add_weight(name='c',
-                                  shape=(self.m, self.n),
-                                  initializer=tf.keras.initializers.RandomUniform(minval=-1.5, maxval=1.5, seed=42),
-                                  trainable=True)
+    def call(self, x: tf.Tensor) -> tf.Tensor:
+        x_exp = tf.expand_dims(x, axis=1)
+        sigma = tf.nn.softplus(self.log_sigma) + self.eps
+        z = (x_exp - self.c) / (sigma + self.eps)
+        mu = tf.exp(-0.5 * tf.square(z))
+        return mu
 
-        # Szerokości funkcji gaussowskich
-        self.sigma = self.add_weight(name='sigma',
-                                     shape=(self.m, self.n),
-                                     initializer=tf.keras.initializers.RandomUniform(minval=0.5, maxval=1.5, seed=42),
-                                     trainable=True)
+    def get_membership_params(self) -> Tuple[np.ndarray, np.ndarray]:
+        c = self.c.numpy()
+        sigma = (np.log1p(np.exp(self.log_sigma.numpy())) + 1e-6)  # softplus
+        return c, sigma
 
-        super(FuzzyLayer, self).build(batch_input_shape)
-
-    def call(self, x_inputs):
-        """Gaussowska funkcja przynależności"""
-        L1_output = tf.exp(-1 * tf.square(tf.subtract(
-                                tf.reshape(
-                                    tf.tile(x_inputs, (1, self.m)), (-1, self.m, self.n)), self.c
-                            )) / (tf.square(self.sigma) + 1e-8))
-        return L1_output
+    def init_from_data(self, X: np.ndarray):
+        X = np.asarray(X)
+        assert X.ndim == 2 and X.shape[1] == self.n, "X must be (N, n_input)"
+        qs = np.linspace(0.1, 0.9, num=self.m)
+        centres = np.zeros((self.m, self.n), dtype=np.float32)
+        widths = np.zeros_like(centres)
+        for i in range(self.n):
+            col = X[:, i]
+            c_i = np.quantile(col, qs)
+            centres[:, i] = c_i
+            diffs = np.diff(c_i)
+            if len(diffs) == 0 or np.all(diffs == 0):
+                iqr = np.subtract(*np.percentile(col, [75, 25]))
+                s = iqr / (2.0 * max(self.m, 2)) if iqr > 0 else (col.std() + 1e-3)
+                widths[:, i] = s
+            else:
+                left = np.r_[diffs[0], diffs]
+                right = np.r_[diffs, diffs[-1]]
+                widths[:, i] = 0.5 * (left + right)
+        widths = np.clip(widths, 1e-3, None)
+        self.c.assign(centres)
+        self.log_sigma.assign(np.log(np.expm1(widths)))
 
 
 class RuleLayer(tf.keras.layers.Layer):
-    """Warstwa reguł - oblicza stopień odpalenia każdej reguły"""
-    def __init__(self, n_input, n_memb, **kwargs):
-        super(RuleLayer, self).__init__(**kwargs)
-        self.n = n_input
-        self.m = n_memb
-        self.batch_size = None
+    def __init__(self, n_input: int, n_memb: int, **kwargs):
+        super().__init__(**kwargs)
+        self.n = int(n_input)
+        self.m = int(n_memb)
 
-    def build(self, batch_input_shape):
-        self.batch_size = batch_input_shape[0]
-        super(RuleLayer, self).build(batch_input_shape)
-
-    def call(self, input_):
-        if self.n < 2:
-            raise ValueError("Liczba cech musi być >= 2")
-
-        reshaped_tensors = []
-
-        for i in range(self.n):
-            shape = [self.batch_size] + [1] * self.n
-            shape[i+1] = -1
-            reshaped_tensors.append(tf.reshape(input_[:, :, i], shape))
-
-        L2_output = reshaped_tensors[0]
-
-        for tensor in reshaped_tensors[1:]:
-            L2_output *= tensor
-
-        return tf.reshape(L2_output, [self.batch_size, -1])
+    def call(self, mu: tf.Tensor) -> tf.Tensor:
+        if self.n < 1:
+            raise ValueError("n_input must be >= 1")
+        parts = [mu[:, :, i] for i in range(self.n)]
+        out = parts[0]
+        for i in range(1, self.n):
+            out = tf.einsum("bm,bn->bmn", out, parts[i])
+            out = tf.reshape(out, (tf.shape(mu)[0], -1))
+        return out
 
 
 class NormLayer(tf.keras.layers.Layer):
-    """Warstwa normalizacji - normalizuje wagi reguł"""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def call(self, w):
-        w_sum = tf.reshape(tf.reduce_sum(w, axis=1), (-1, 1))
-        w_norm = w / (w_sum + 1e-8)
-        return w_norm
+    def call(self, w: tf.Tensor) -> tf.Tensor:
+        s = tf.reduce_sum(w, axis=1, keepdims=True)
+        return w / (s + 1e-8)
 
 
 class DefuzzLayer(tf.keras.layers.Layer):
-    """Warstwa defuzzyfikacji - przekształca wagi na wartości wyjściowe"""
-    def __init__(self, n_input, n_memb, **kwargs):
+    def __init__(self, n_input: int, n_rules: int, **kwargs):
         super().__init__(**kwargs)
-        self.n = n_input
-        self.m = n_memb
+        self.n = int(n_input)
+        self.r = int(n_rules)
 
-        # Bias dla każdej reguły
-        self.CP_bias = self.add_weight(name='Consequence_bias',
-                                       shape=(1, self.m ** self.n),
-                                       initializer=tf.keras.initializers.RandomUniform(minval=-2, maxval=2, seed=42),
-                                       trainable=True)
+    def build(self, input_shape):
+        self.A = self.add_weight(
+            name="A",
+            shape=(self.n, self.r),
+            initializer=tf.keras.initializers.RandomUniform(minval=-0.5, maxval=0.5),
+            trainable=True,
+        )
+        self.b = self.add_weight(
+            name="b",
+            shape=(self.r,),
+            initializer=tf.keras.initializers.Zeros(),
+            trainable=True,
+        )
+        super().build(input_shape)
 
-        # Wagi dla każdej cechy i reguły
-        self.CP_weight = self.add_weight(name='Consequence_weight',
-                                         shape=(self.n, self.m ** self.n),
-                                         initializer=tf.keras.initializers.RandomUniform(minval=-2, maxval=2, seed=42),
-                                         trainable=True)
-
-    def call(self, w_norm, input_):
-        L4_L2_output = tf.multiply(w_norm, tf.matmul(input_, self.CP_weight) + self.CP_bias)
-        return L4_L2_output
+    def call(self, inputs: Tuple[tf.Tensor, tf.Tensor]) -> tf.Tensor:
+        w_norm, x = inputs
+        y = tf.linalg.matmul(x, self.A) + self.b
+        return w_norm * y
 
 
 class SummationLayer(tf.keras.layers.Layer):
-    """Warstwa sumowania - agreguje wyniki"""
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def call(self, per_rule: tf.Tensor) -> tf.Tensor:
+        y = tf.reduce_sum(per_rule, axis=1, keepdims=True)
+        return y
 
-    def build(self, batch_input_shape):
-        self.batch_size = batch_input_shape[0]
-        super(SummationLayer, self).build(batch_input_shape)
 
-    def call(self, input_):
-        L5_L2_output = tf.reduce_sum(input_, axis=1)
-        L5_L2_output = tf.reshape(L5_L2_output, (-1, 1))
-        return L5_L2_output
+class ANFISModel:
+    def __init__(self, n_input: int, n_memb: int, task: str = "classification"):
+        self.n = int(n_input)
+        self.m = int(n_memb)
+        self.task = task
+
+        x_in = tf.keras.Input(shape=(self.n,), name="inputs")
+        mu = FuzzyLayer(self.n, self.m, name="fuzzy")(x_in)
+        w = RuleLayer(self.n, self.m, name="rules")(mu)
+        w_norm = NormLayer(name="norm")(w)
+        R = (self.m ** self.n)
+        per_rule = DefuzzLayer(self.n, R, name="defuzz")([w_norm, x_in])
+        y_raw = SummationLayer(name="sum")(per_rule)
+
+        if task == "classification":
+            y_out = tf.keras.layers.Activation("sigmoid", name="out")(y_raw)
+            loss = "binary_crossentropy"
+            metrics = ["accuracy"]
+        elif task == "regression":
+            y_out = tf.identity(y_raw, name="out")
+            loss = "mse"
+            metrics = ["mse"]
+        else:
+            raise ValueError("task must be 'classification' or 'regression'")
+
+        self.model = tf.keras.Model(inputs=x_in, outputs=y_out, name="ANFIS")
+        self.model.compile(optimizer=tf.keras.optimizers.Nadam(1e-3), loss=loss, metrics=metrics)
+
+    def summary(self):
+        return self.model.summary()
+
+    def predict(self, X: np.ndarray, batch_size: Optional[int] = None) -> np.ndarray:
+        return self.model.predict(X, batch_size=batch_size or 32, verbose=0)
+
+    def fit(self, X: np.ndarray, y: np.ndarray, *, epochs: int = 20, batch_size: int = 32,
+            validation_split: float = 0.2, callbacks: Optional[list] = None, verbose: int = 1):
+        return self.model.fit(
+            X, y,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_split=validation_split,
+            callbacks=callbacks,
+            verbose=verbose,
+        )
+
+    def get_membership_params(self) -> Tuple[np.ndarray, np.ndarray]:
+        fl: FuzzyLayer = self.model.get_layer("fuzzy")
+        return fl.get_membership_params()
+
+    def init_memberships_from_data(self, X: np.ndarray):
+        fl: FuzzyLayer = self.model.get_layer("fuzzy")
+        fl.init_from_data(X)
