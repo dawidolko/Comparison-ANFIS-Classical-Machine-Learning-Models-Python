@@ -333,19 +333,29 @@ def show_prediction():
                     quality = "✅ DOBRA" if pred > 0.5 else "❌ ZŁA"
                     st.metric("Przewidywana jakość", quality)
                     st.metric("Prawdopodobieństwo", f"{pred*100:.2f}%")
-
             # SVM
             if os.path.exists('models/svm_model.pkl'):
                 with col3:
                     st.subheader("SVM")
-                    with open('models/svm_model.pkl', 'rb') as f:
-                        svm_model = pickle.load(f)
-                    pred = svm_model.predict(input_scaled)[0]
-                    prob = svm_model.decision_function(input_scaled)[0]
+                    try:
+                        with open('models/svm_model.pkl', 'rb') as f:
+                            svm_model = pickle.load(f)
 
-                    quality = "✅ DOBRA" if pred == 1 else "❌ ZŁA"
-                    st.metric("Przewidywana jakość", quality)
-                    st.metric("Funkcja decyzyjna", f"{prob:.2f}")
+                        # Używamy PROB prawdopodobieństw, nie funkcji decyzyjnej
+                        if hasattr(svm_model, "predict_proba"):
+                            proba = float(svm_model.predict_proba(input_scaled)[0, 1])  # klasa 1
+                            pred = int(svm_model.predict(input_scaled)[0])
+                            quality = "✅ DOBRA" if pred == 1 else "❌ ZŁA"
+                            st.metric("Przewidywana jakość", quality)
+                            st.metric("Prawdopodobieństwo", f"{proba * 100:.2f}%")
+                        else:
+                            # Model nie był trenowany z probability=True (SVC) lub nie jest skalibrowany.
+                            # Nie pokazujemy funkcji decyzyjnej – tylko komunikat.
+                            st.error("Ten model SVM nie udostępnia predict_proba. Wytrenuj z `probability=True` (SVC) "
+                                     "albo użyj kalibracji (CalibratedClassifierCV), żeby mieć prawdopodobieństwa.")
+                    except Exception as e:
+                        st.warning(f"SVM: {e}")
+
 
         else:
             st.error("❌ Brak wytrenowanych modeli! Uruchom najpierw: python main.py")
