@@ -34,7 +34,6 @@ echo "[KROK 1] Uruchamianie projektu..."
 echo "========================================"
 echo ""
 
-
 if [ $? -ne 0 ]; then
     echo ""
     echo "[ERROR] Projekt zakończył się błędem!"

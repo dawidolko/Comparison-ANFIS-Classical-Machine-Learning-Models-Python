@@ -36,6 +36,7 @@ echo ========================================
 echo [KROK 1] Uruchamianie projektu...
 echo ========================================
 echo.
+python main.py
 
 if %errorlevel% neq 0 (
     echo.
