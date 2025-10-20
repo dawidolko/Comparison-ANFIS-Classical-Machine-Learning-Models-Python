@@ -1,0 +1,17 @@
+# IDE i środowisko
+.idea/
+.venv/
+
+# Pliki kompilacji Pythona
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Dane tymczasowe lub logi
+*.log
+*.tmp
+
+# Inne typowe dla projektów Python
+.env
+.DS_Store
