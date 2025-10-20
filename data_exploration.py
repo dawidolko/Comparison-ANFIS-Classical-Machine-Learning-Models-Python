@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Wyłącza wyświetlanie okien - tylko zapis do plików
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -47,7 +49,8 @@ plt.ylabel('Liczba próbek')
 plt.title('Rozkład jakości wina (bar)')
 plt.tight_layout()
 plt.savefig('results/quality_distribution.png', dpi=300, bbox_inches='tight')
-plt.show()
+plt.close()
+print("✓ Wykres zapisany: results/quality_distribution.png")
 
 # Korelacja między cechami
 plt.figure(figsize=(12, 10))
@@ -56,4 +59,5 @@ sns.heatmap(correlation, annot=True, fmt='.2f', cmap='coolwarm', center=0)
 plt.title('Macierz korelacji cech')
 plt.tight_layout()
 plt.savefig('results/correlation_matrix.png', dpi=300, bbox_inches='tight')
-plt.show()
+plt.close()
+print("✓ Wykres zapisany: results/correlation_matrix.png")

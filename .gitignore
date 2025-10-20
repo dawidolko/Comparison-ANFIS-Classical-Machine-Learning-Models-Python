@@ -1,12 +1,42 @@
 # IDE i środowisko
 .idea/
+.vscode/
 .venv/
+venv/
+env/
+*.swp
+*.swo
+*~
 
 # Pliki kompilacji Pythona
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Dane wygenerowane przez projekt
+data/*.npy
+data/*.csv
+!data/winequality-red.csv
+!data/winequality-white.csv
+!data/winequality.names
+
+# Modele wytrenowane
+models/*.h5
+models/*.keras
+models/*.pkl
+models/*.weights.h5
+
+# Wyniki i wykresy
+results/*.png
+results/*.json
+results/*.txt
+results/*.npy
 
 # Dane tymczasowe lub logi
 *.log
@@ -15,3 +45,21 @@ __pycache__/
 # Inne typowe dla projektów Python
 .env
 .DS_Store
+.python-version
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# System plików macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

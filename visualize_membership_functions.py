@@ -4,6 +4,8 @@ Pokazuje gaussowskie funkcje przynależności dla wybranych cech
 """
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Wyłącza wyświetlanie okien - tylko zapis do plików
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from anfis import ANFISModel

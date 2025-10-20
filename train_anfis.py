@@ -2,6 +2,8 @@ import os
 import json
 import numpy as np
 import tensorflow as tf
+import matplotlib
+matplotlib.use('Agg')  # Wyłącza wyświetlanie okien - tylko zapis do plików
 import matplotlib.pyplot as plt
 from anfis import ANFISModel
 

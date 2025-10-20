@@ -1,4 +1,6 @@
 import json
+import matplotlib
+matplotlib.use('Agg')  # Wyłącza wyświetlanie okien - tylko zapis do plików
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -68,7 +70,7 @@ def plot_comparison_bar_chart(results):
 
     plt.tight_layout()
     plt.savefig('results/all_models_comparison.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    plt.close()
     print("\n✓ Wykres zapisany: results/all_models_comparison.png")
 
 
@@ -98,7 +100,7 @@ def plot_overfitting_analysis(results):
 
     plt.tight_layout()
     plt.savefig('results/overfitting_analysis.png', dpi=300, bbox_inches='tight')
-    plt.show()
+    plt.close()
     print("✓ Wykres zapisany: results/overfitting_analysis.png")
 
 
