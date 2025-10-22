@@ -42,7 +42,13 @@ def visualize_membership_functions(n_memb=3):
     print(f"{'='*80}\n")
 
     # Sprawdź czy model istnieje
-    model_path = f'models/anfis_best_{n_memb}memb.weights.h5'
+    # Prefer per-dataset model folder for wine
+    candidate = os.path.join('models', 'wine-quality', f'anfis_best_{n_memb}memb.weights.h5')
+    if os.path.exists(candidate):
+        model_path = candidate
+    else:
+        model_path = f'models/anfis_best_{n_memb}memb.weights.h5'
+
     if not os.path.exists(model_path):
         print(f"✗ Model {model_path} nie istnieje. Pomiń wizualizację.")
         return

@@ -70,7 +70,11 @@ def train_anfis_for_dataset(dataset: str, n_memb: int, epochs: int, batch_size: 
     model.model.compile(optimizer=tf.keras.optimizers.Nadam(1e-3), loss='binary_crossentropy', metrics=['accuracy'])
     model.model.summary()
 
-    models_dir = 'models' if dataset == 'wine' else os.path.join('models', dataset)
+    # For wine dataset we keep per-dataset models under models/wine-quality/
+    if dataset == 'wine':
+        models_dir = os.path.join('models', 'wine-quality')
+    else:
+        models_dir = os.path.join('models', dataset)
     os.makedirs(models_dir, exist_ok=True)
     os.makedirs('results', exist_ok=True)
 

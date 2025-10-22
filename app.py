@@ -397,8 +397,18 @@ def show_prediction():
             with col1:
                 try:
                     if dataset == 'wine':
-                        model_path_2 = os.path.join('models', 'anfis_best_2memb.weights.h5')
-                        model_path_3 = os.path.join('models', 'anfis_best_3memb.weights.h5')
+                        # Prefer per-dataset folder
+                        candidate_2 = os.path.join('models', 'wine-quality', 'anfis_best_2memb.weights.h5')
+                        candidate_3 = os.path.join('models', 'wine-quality', 'anfis_best_3memb.weights.h5')
+                        if os.path.exists(candidate_2):
+                            model_path_2 = candidate_2
+                        else:
+                            model_path_2 = os.path.join('models', 'anfis_best_2memb.weights.h5')
+
+                        if os.path.exists(candidate_3):
+                            model_path_3 = candidate_3
+                        else:
+                            model_path_3 = os.path.join('models', 'anfis_best_3memb.weights.h5')
                     else:
                         model_path_2 = os.path.join('models', 'concrete-strength', 'anfis_best_2memb.weights.h5')
                         model_path_3 = os.path.join('models', 'concrete-strength', 'anfis_best_3memb.weights.h5')
