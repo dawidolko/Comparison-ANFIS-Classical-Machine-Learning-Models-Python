@@ -20,17 +20,21 @@ dist/
 build/
 
 # Dane wygenerowane przez projekt
-data/*.npy
-data/*.csv
-!data/winequality-red.csv
-!data/winequality-white.csv
-!data/winequality.names
+# Ignore generated numpy arrays and CSV outputs inside data/ and subfolders
+data/**/*.npy
+data/**/*.csv
+# Keep original source CSVs for wine
+!data/wine-quality/winequality-red.csv
+!data/wine-quality/winequality-white.csv
+!data/wine-quality/winequality.names
 
-# Modele wytrenowane
-models/*.h5
-models/*.keras
-models/*.pkl
-models/*.weights.h5
+# Modele wytrenowane (ignoruj duże/binarne pliki w katalogach models/)
+models/**/*.h5
+models/**/*.keras
+models/**/*.pkl
+models/**/*.weights.h5
+# keep .gitkeep files if present
+!models/.gitkeep
 
 # Wyniki i wykresy
 results/*.png
