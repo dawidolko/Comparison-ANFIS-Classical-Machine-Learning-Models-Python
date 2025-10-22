@@ -27,6 +27,7 @@ data/**/*.csv
 !data/wine-quality/winequality-red.csv
 !data/wine-quality/winequality-white.csv
 !data/wine-quality/winequality.names
+!data/concrete-strength/Concrete_Data.csv
 
 # Modele wytrenowane (ignoruj duże/binarne pliki w katalogach models/)
 models/**/*.h5
