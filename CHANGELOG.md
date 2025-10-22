@@ -123,11 +123,13 @@ Comparison-ANFIS-Classical-Machine-Learning-Models-Python/
 ├── train_comparison_models.py         # ✨ Bez plt.show()
 ├── utils.py                           # ✨ NOWY - funkcje pomocnicze
 ├── visualize_membership_functions.py  # ✨ Bez plt.show()
-├── data/                              # Dane (ignorowane w git)
-│   ├── winequality-red.csv
-│   ├── winequality-white.csv
-│   ├── X_train.npy                    # Ignorowane
-│   └── ...
+├── data/                              # Dane (źródła i przetworzone)
+│   ├── wine-quality/
+│   │   ├── winequality-red.csv
+│   │   ├── winequality-white.csv
+│   │   ├── X_train.npy                # Ignorowane (przetworzone - zapisane w wine-quality)
+│   │   └── ...
+│   └── concrete-strength/             # surowe CSV i przetworzone NPY dla betonu
 ├── models/                            # Modele (ignorowane w git)
 │   ├── anfis_best_2memb.weights.h5    # Ignorowane
 │   ├── anfis_best_3memb.weights.h5    # Ignorowane

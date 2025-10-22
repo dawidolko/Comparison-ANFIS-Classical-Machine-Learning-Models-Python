@@ -35,10 +35,13 @@ wine_quality_anfis/
 │   ├── winequality-red.csv        # Dataset wina czerwonego
 │   ├── winequality-white.csv      # Dataset wina białego
 │   ├── winequality.names          # Opis datasetu
-│   ├── X_train.npy               # (generowane)
-│   ├── X_test.npy                # (generowane)
-│   ├── y_train.npy               # (generowane)
-│   └── y_test.npy                # (generowane)
+│   ├── wine-quality/              # katalog z surowymi CSV i przetworzonymi NPY
+│   │   ├── winequality-red.csv    # źródłowy dataset czerwonego wina
+│   │   ├── winequality-white.csv  # źródłowy dataset białego wina
+│   │   ├── X_train.npy            # (generowane, przetworzone dane treningowe)
+│   │   ├── X_test.npy             # (generowane, przetworzone dane testowe)
+│   │   ├── y_train.npy            # (generowane)
+│   │   └── y_test.npy             # (generowane)
 ├── models/                        # Wytrenowane modele (generowane)
 │   ├── anfis_best_2memb.weights.h5
 │   ├── anfis_best_3memb.weights.h5

@@ -90,10 +90,15 @@ def plot_training_history(history, model_name, out_path):
     print(f"✓ Wykres zapisany: {out_path}")
 
 def load_data():
-    X_train = np.load('data/X_train.npy')
-    y_train = np.load('data/y_train.npy')
-    X_test  = np.load('data/X_test.npy')
-    y_test  = np.load('data/y_test.npy')
+    # prefer data/wine-quality for wine dataset
+    if os.path.exists(os.path.join('data', 'wine-quality', 'X_train.npy')):
+        base = os.path.join('data', 'wine-quality')
+    else:
+        base = 'data'
+    X_train = np.load(os.path.join(base, 'X_train.npy'))
+    y_train = np.load(os.path.join(base, 'y_train.npy'))
+    X_test  = np.load(os.path.join(base, 'X_test.npy'))
+    y_test  = np.load(os.path.join(base, 'y_test.npy'))
     y_train = ensure_column_vector(y_train).astype(np.float32)
     y_test  = ensure_column_vector(y_test).astype(np.float32)
     return X_train, y_train, X_test, y_test

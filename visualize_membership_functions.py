@@ -62,8 +62,11 @@ def visualize_membership_functions(n_memb=3):
         'alcohol'
     ]
 
-    # Wczytaj dane treningowe (dla wymiaru)
-    X_train = np.load('data/X_train.npy')
+    # Wczytaj dane treningowe (dla wymiaru) - prefer data/wine-quality
+    if os.path.exists(os.path.join('data', 'wine-quality', 'X_train.npy')):
+        X_train = np.load(os.path.join('data', 'wine-quality', 'X_train.npy'))
+    else:
+        X_train = np.load('data/X_train.npy')
     n_features = X_train.shape[1]
 
     # Stwórz model ANFIS

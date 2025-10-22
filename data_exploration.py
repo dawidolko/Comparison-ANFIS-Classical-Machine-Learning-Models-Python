@@ -4,10 +4,11 @@ import matplotlib
 matplotlib.use('Agg')  # Wyłącza wyświetlanie okien - tylko zapis do plików
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-# Wczytaj dane
-red_wine = pd.read_csv('data/winequality-red.csv', sep=';')
-white_wine = pd.read_csv('data/winequality-white.csv', sep=';')
+# Wczytaj dane (nowa ścieżka: data/wine-quality/)
+red_wine = pd.read_csv(os.path.join('data', 'wine-quality', 'winequality-red.csv'), sep=';')
+white_wine = pd.read_csv(os.path.join('data', 'wine-quality', 'winequality-white.csv'), sep=';')
 
 # Dodaj kolumnę typu wina
 red_wine['type'] = 0

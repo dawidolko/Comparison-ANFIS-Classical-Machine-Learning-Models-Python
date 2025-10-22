@@ -8,14 +8,32 @@ echo "============================================================"
 echo ""
 
 # Sprawdź czy Python jest zainstalowany
-if ! command -v python3 &> /dev/null; then
-    echo "❌ [ERROR] Python3 nie jest zainstalowany!"
-    echo "Zainstaluj Python3 używając menedżera pakietów twojej dystrybucji"
+if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+    echo "❌ [ERROR] Python nie jest zainstalowany!"
+    echo "Zainstaluj Python używając menedżera pakietów twojej dystrybucji"
     exit 1
 fi
 
-echo "✓ [1/5] Sprawdzam wersję Pythona..."
-python3 --version
+# Jeśli nie jesteśmy w wirtualnym środowisku - utwórz i aktywuj .venv
+if [ -z "$VIRTUAL_ENV" ]; then
+    # Preferuj pyenv python 3.11.9 jeśli jest zainstalowany (użyty wcześniej podczas testów)
+    if [ -x "/home/jakub/.pyenv/versions/3.11.9/bin/python" ]; then
+        PYTHON_BIN="/home/jakub/.pyenv/versions/3.11.9/bin/python"
+    else
+        PYTHON_BIN=$(command -v python3 || command -v python)
+    fi
+
+    echo "Utworzę/aktywuję wirtualne środowisko .venv używając: $PYTHON_BIN"
+    if [ ! -d ".venv" ]; then
+        $PYTHON_BIN -m venv .venv
+    fi
+    # Aktywuj venv dla tego skryptu
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+fi
+
+echo "✓ [1/5] Sprawdzam wersję Pythona (w venv jeśli aktywne)..."
+python --version
 echo ""
 
 echo "📦 [2/5] Instaluję zależności z requirements.txt..."

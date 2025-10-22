@@ -21,6 +21,12 @@ python --version
 echo.
 
 echo PAKIETY [2/5] Instaluję zależności z requirements.txt...
+echo Aby uniknąć problemów z instalacją do systemowego Pythona, upewnij się, że używasz virtualenv.
+if "%VIRTUAL_ENV%"=="" (
+    echo Brak aktywnego venv. Tworzenie .venv...
+    python -m venv .venv
+    call .venv\Scripts\activate
+)
 echo To może potrwać kilka minut...
 python -m pip install -r requirements.txt --quiet
 if %errorlevel% neq 0 (
