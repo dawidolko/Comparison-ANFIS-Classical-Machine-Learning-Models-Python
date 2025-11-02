@@ -1,0 +1,26 @@
+{
+  "all": {
+    "n_samples": 6497,
+    "n_train": 5197,
+    "n_test": 1300,
+    "n_features": 11,
+    "class_0": 2384,
+    "class_1": 4113
+  },
+  "red": {
+    "n_samples": 1599,
+    "n_train": 1279,
+    "n_test": 320,
+    "n_features": 11,
+    "class_0": 744,
+    "class_1": 855
+  },
+  "white": {
+    "n_samples": 4898,
+    "n_train": 3918,
+    "n_test": 980,
+    "n_features": 11,
+    "class_0": 1640,
+    "class_1": 3258
+  }
+}

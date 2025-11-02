@@ -69,9 +69,9 @@ def plot_comparison_bar_chart(results):
                     f'{height:.1f}%', ha='center', va='bottom', fontsize=9)
 
     plt.tight_layout()
-    plt.savefig('results/all_models_comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig('results/model_comparison_bar.png', dpi=300, bbox_inches='tight')
     plt.close()
-    print("\n✓ Wykres zapisany: results/all_models_comparison.png")
+    print("\n✓ Wykres zapisany: results/model_comparison_bar.png")
 
 
 def plot_overfitting_analysis(results):
