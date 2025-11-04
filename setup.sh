@@ -1,52 +1,71 @@
 #!/bin/bash
 set -e
+
 echo "======================================"
-echo "INSTALACJA ŚRODOWISKA I GENEROWANIE DANYCH"
+echo "SETUP: Environment & Data Generation"
 echo "======================================"
+
+# Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
-    echo "Tworzę venv..."
+    echo "Creating virtual environment..."
     python3 -m venv venv
 fi
+
+# Activate virtual environment
 source venv/bin/activate
-echo "Instaluję zależności..."
+
+# Install dependencies
+echo "Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
+
 echo ""
 echo "======================================"
-echo "PRZETWARZANIE DANYCH (all, red, white)"
+echo "STEP 1: Data Preprocessing"
 echo "======================================"
 python3 data_preprocessing.py
+
 echo ""
 echo "======================================"
-echo "TRENING ANFIS - WSZYSTKIE DATASETY + CV"
+echo "STEP 2: ANFIS Training (All Datasets + Cross-Validation)"
 echo "======================================"
 python3 train_anfis.py --datasets concrete all red white --memb 2 3 --epochs 20 --cv
+
 echo ""
 echo "======================================"
-echo "WIZUALIZACJA FUNKCJI PRZYNALEŻNOŚCI"
+echo "STEP 3: Membership Functions Visualization"
 echo "======================================"
 python3 visualize_membership_functions.py --datasets concrete all red white --memb 2 3
+
 echo ""
 echo "======================================"
-echo "EKSPLORACJA DANYCH (WYKRESY)"
+echo "STEP 4: Data Exploration (Plots)"
 echo "======================================"
 python3 data_exploration.py
+
 echo ""
 echo "======================================"
-echo "PORÓWNANIE WSZYSTKICH MODELI"
+echo "STEP 5: Model Comparison"
 echo "======================================"
 python3 train_comparison_models.py
 python3 compare_all_models.py
+
 echo ""
 echo "======================================"
-echo "✅ WSZYSTKO WYGENEROWANE!"
+echo "✅ ALL FILES GENERATED SUCCESSFULLY!"
 echo "======================================"
 echo ""
-echo "Wygenerowane pliki:"
-ls -1 results/anfis_*.png results/anfis_*.json 2>/dev/null | wc -l | xargs echo "  - ANFIS wyniki:"
-ls -1 results/membership_functions_*.png 2>/dev/null | wc -l | xargs echo "  - Funkcje przynależności:"
+echo "Generated files:"
+ls -1 results/anfis_*.png results/anfis_*.json 2>/dev/null | wc -l | xargs echo "  - ANFIS results:"
+ls -1 results/membership_functions_*.png 2>/dev/null | wc -l | xargs echo "  - Membership functions:"
+ls -1 results/wine_*.png results/concrete_*.png 2>/dev/null | wc -l | xargs echo "  - Data exploration:"
+ls -1 results/model_comparison_*.png 2>/dev/null | wc -l | xargs echo "  - Model comparison:"
+
 echo ""
 echo "======================================"
-echo "URUCHAMIAM STREAMLIT GUI"
+echo "🚀 LAUNCHING STREAMLIT GUI"
 echo "======================================"
+echo ""
+echo "Open your browser at: http://localhost:8501"
+echo ""
 streamlit run app.py
