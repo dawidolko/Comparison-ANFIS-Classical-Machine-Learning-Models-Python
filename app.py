@@ -104,10 +104,18 @@ def show_anfis_results():
     if results:
         st.markdown("---")
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Train Accuracy", f"{results['train_accuracy']:.4f}")
-        col2.metric("Test Accuracy", f"{results['test_accuracy']:.4f}")
-        col3.metric("Train Loss", f"{results['train_loss']:.4f}")
-        col4.metric("Test Loss", f"{results['test_loss']:.4f}")
+        
+        # Dla concrete (regresja) pokazujemy MAE, dla wine pokazujemy accuracy
+        if dataset == 'concrete':
+            col1.metric("Train MAE", f"{results.get('train_mae', results.get('train_accuracy', 0)):.4f}")
+            col2.metric("Test MAE", f"{results.get('test_mae', results.get('test_accuracy', 0)):.4f}")
+            col3.metric("Train Loss", f"{results['train_loss']:.4f}")
+            col4.metric("Test Loss", f"{results['test_loss']:.4f}")
+        else:
+            col1.metric("Train Accuracy", f"{results.get('train_accuracy', 0):.4f}")
+            col2.metric("Test Accuracy", f"{results.get('test_accuracy', 0):.4f}")
+            col3.metric("Train Loss", f"{results['train_loss']:.4f}")
+            col4.metric("Test Loss", f"{results['test_loss']:.4f}")
         
         st.markdown("---")
         st.subheader("📈 Krzywe Uczenia (Accuracy + Loss)")
@@ -127,10 +135,19 @@ def show_anfis_results():
         cv_data = load_json_safe(cv_file)
         if cv_data:
             st.markdown("---")
-            st.subheader("✅ Cross-Walidacja (5-fold Stratified)")
+            st.subheader("✅ Cross-Walidacja (5-fold)")
             col1, col2 = st.columns(2)
-            col1.metric("Mean Accuracy", f"{cv_data['mean_accuracy']:.4f}")
-            col2.metric("Std Accuracy", f"± {cv_data['std_accuracy']:.4f}")
+            
+            # Dla concrete pokazujemy MAE, dla wine accuracy
+            if dataset == 'concrete':
+                metric_name = cv_data.get('metric_type', 'mae')
+                mean_key = 'mean_mae' if 'mean_mae' in cv_data else 'mean_accuracy'
+                std_key = 'std_mae' if 'std_mae' in cv_data else 'std_accuracy'
+                col1.metric(f"Mean {metric_name.upper()}", f"{cv_data.get(mean_key, 0):.4f}")
+                col2.metric(f"Std {metric_name.upper()}", f"± {cv_data.get(std_key, 0):.4f}")
+            else:
+                col1.metric("Mean Accuracy", f"{cv_data.get('mean_accuracy', 0):.4f}")
+                col2.metric("Std Accuracy", f"± {cv_data.get('std_accuracy', 0):.4f}")
             
             st.markdown("**Wyniki dla każdego folda:**")
             fold_df = pd.DataFrame(cv_data['folds'])
