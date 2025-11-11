@@ -23,26 +23,32 @@ echo ""
 echo "======================================"
 echo "STEP 1: Data Preprocessing"
 echo "======================================"
+python3 data_preprocessing.py
 
 echo ""
 echo "======================================"
 echo "STEP 2: ANFIS Training (All Datasets + Cross-Validation)"
 echo "======================================"
+python3 train_anfis.py --datasets concrete all red white --memb 2 3 --epochs 20 --cv
 
 echo ""
 echo "======================================"
 echo "STEP 3: Membership Functions Visualization"
 echo "======================================"
+python3 visualize_membership_functions.py --datasets concrete all red white --memb 2 3
 
 echo ""
 echo "======================================"
 echo "STEP 4: Data Exploration (Plots)"
 echo "======================================"
+python3 data_exploration.py
 
 echo ""
 echo "======================================"
 echo "STEP 5: Model Comparison"
 echo "======================================"
+python3 train_comparison_models.py
+python3 compare_all_models.py
 
 echo ""
 echo "======================================"
