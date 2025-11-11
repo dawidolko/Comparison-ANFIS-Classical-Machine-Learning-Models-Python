@@ -156,10 +156,9 @@ def show_anfis_results():
         st.warning(f"⚠ Brak wyników dla dataset={dataset}, n_memb={n_memb}")
         st.info("Uruchom: ./setup.sh aby wygenerować wszystkie wyniki")
 
-
 def show_rules():
     st.title("📜 Reguły ANFIS i Historia Uczenia")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         problem = st.selectbox("Wybierz problem:", ['Wine Quality', 'Concrete Strength'], key='rules_problem')
@@ -169,15 +168,15 @@ def show_rules():
         else:
             dataset = 'concrete'
             st.info("Dataset: Concrete")
-    
+
     n_memb = st.selectbox("Liczba MF:", [2, 3], key='rules_memb')
-    
+
     rules_file = f'results/anfis_{dataset}_{n_memb}memb_rules.json'
     results_file = f'results/anfis_{dataset}_{n_memb}memb_results.json'
-    
+
     rules_data = load_json_safe(rules_file)
     results = load_json_safe(results_file)
-    
+
     if rules_data:
         st.markdown("---")
         st.subheader("📊 Statystyki Reguł")
@@ -185,7 +184,7 @@ def show_rules():
         col1.metric("Łączna liczba reguł", rules_data['n_rules_total'])
         col2.metric("Pokazanych reguł", rules_data['rules_listed'])
         col3.metric("Liczba cech", rules_data['n_features'])
-        
+
         if rules_data.get('approx_top_rule_frequency'):
             st.markdown("---")
             st.subheader("🔥 Top 10 Najczęściej Aktywowanych Reguł")
@@ -193,52 +192,65 @@ def show_rules():
             top10 = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:10]
             df = pd.DataFrame(top10, columns=['Rule Index', 'Activations'])
             st.bar_chart(df.set_index('Rule Index'))
-        
+
         st.markdown("---")
         st.subheader("📋 Przykładowe Reguły")
-        st.markdown(f"**Interpretacja:** Każda reguła ma postać:")
+        st.markdown("**Interpretacja:** Każda reguła ma postać:")
         st.code("""
 IF cecha_1 IS MF[i1] AND cecha_2 IS MF[i2] AND ... AND cecha_n IS MF[in]
 THEN output = w0 + w1*x1 + w2*x2 + ... + wn*xn
         """)
-        
-        for i, rule in enumerate(rules_data['rules'][:5]):
+
+        for rule in rules_data['rules'][:5]:
             with st.expander(f"Reguła #{rule['rule_index']}"):
                 st.write(f"**Indeksy MF:** {rule['membership_indices']}")
                 st.write(f"**Bias:** {rule['consequent']['bias']:.4f}")
                 st.write(f"**Wagi:** {[f'{w:.4f}' for w in rule['consequent']['weights'][:5]]}...")
-        
+
         st.download_button(
             label="📥 Pobierz wszystkie reguły (JSON)",
             data=json.dumps(rules_data, indent=2),
             file_name=f'anfis_{dataset}_{n_memb}memb_rules.json',
             mime='application/json'
         )
-    
+
     if results and results.get('history'):
         st.markdown("---")
         st.subheader("📈 Historia Uczenia (Szczegóły)")
         history = results['history']
-        
-        epochs = list(range(1, len(history['accuracy']) + 1))
-        df = pd.DataFrame({
-            'Epoch': epochs,
-            'Train Accuracy': history['accuracy'],
-            'Val Accuracy': history['val_accuracy'],
-            'Train Loss': history['loss'],
-            'Val Loss': history['val_loss']
-        })
-        
-        st.dataframe(df, use_container_width=True)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Najlepsza Val Accuracy", f"{max(history['val_accuracy']):.4f}")
-            st.metric("Epoch", epochs[history['val_accuracy'].index(max(history['val_accuracy']))])
-        with col2:
-            st.metric("Najlepsza Val Loss", f"{min(history['val_loss']):.4f}")
-            st.metric("Epoch", epochs[history['val_loss'].index(min(history['val_loss']))])
 
+        acc = history.get('accuracy')
+        val_acc = history.get('val_accuracy')
+        loss = history.get('loss', [])
+        val_loss = history.get('val_loss', [])
+
+        max_len = max(len(acc or []), len(val_acc or []), len(loss or []), len(val_loss or []))
+        epochs = list(range(1, max_len + 1))
+
+        data = {'Epoch': epochs}
+        if acc is not None:
+            data['Train Accuracy'] = acc
+        if val_acc is not None:
+            data['Val Accuracy'] = val_acc
+        if loss:
+            data['Train Loss'] = loss
+        if val_loss:
+            data['Val Loss'] = val_loss
+
+        df = pd.DataFrame(data)
+        st.dataframe(df, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        if val_acc:
+            best_acc = max(val_acc)
+            best_acc_epoch = epochs[val_acc.index(best_acc)]
+            col1.metric("Najlepsza Val Accuracy", f"{best_acc:.4f}")
+            col1.metric("Epoch", best_acc_epoch)
+        if val_loss:
+            best_loss = min(val_loss)
+            best_loss_epoch = epochs[val_loss.index(best_loss)]
+            col2.metric("Najlepsza Val Loss", f"{best_loss:.4f}")
+            col2.metric("Epoch", best_loss_epoch)
 
 def show_comparison():
     st.title("📊 Porównanie Modeli")

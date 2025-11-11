@@ -135,16 +135,34 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset='all'):
 
     return anfis_model, history, results
 
-
 def plot_training_history(history, n_memb, dataset):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    axes[0].plot(history.history['accuracy'], label='Train', linewidth=2)
-    axes[0].plot(history.history['val_accuracy'], label='Validation', linewidth=2)
-    axes[0].set_xlabel('Epoka')
-    axes[0].set_ylabel('Dokładność')
-    axes[0].set_title(f'ANFIS ({dataset}, {n_memb} MF) - Dokładność')
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
+
+    # detekcja metryk w zależności od typu problemu
+    if 'accuracy' in history.history:
+        metric_key = 'accuracy'
+        val_metric_key = 'val_accuracy'
+        metric_label = 'Dokładność'
+    elif 'mae' in history.history:
+        metric_key = 'mae'
+        val_metric_key = 'val_mae'
+        metric_label = 'MAE'
+    else:
+        metric_key = None
+
+    # wykres metryki (jeśli istnieje)
+    if metric_key:
+        axes[0].plot(history.history[metric_key], label='Train', linewidth=2)
+        axes[0].plot(history.history[val_metric_key], label='Validation', linewidth=2)
+        axes[0].set_xlabel('Epoka')
+        axes[0].set_ylabel(metric_label)
+        axes[0].set_title(f'ANFIS ({dataset}, {n_memb} MF) - {metric_label}')
+        axes[0].legend()
+        axes[0].grid(True, alpha=0.3)
+    else:
+        axes[0].set_visible(False)
+
+    # wykres strat
     axes[1].plot(history.history['loss'], label='Train', linewidth=2)
     axes[1].plot(history.history['val_loss'], label='Validation', linewidth=2)
     axes[1].set_xlabel('Epoka')
@@ -152,12 +170,12 @@ def plot_training_history(history, n_memb, dataset):
     axes[1].set_title(f'ANFIS ({dataset}, {n_memb} MF) - Strata')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
+
     plt.tight_layout()
     out = f'results/anfis_{dataset}_{n_memb}memb_training.png'
     plt.savefig(out, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"✓ Zapisano {out}")
-
 
 def plot_fit_on_train(model: ANFISModel, X_train, y_train, n_memb, dataset):
     preds = model(X_train).reshape(-1)
