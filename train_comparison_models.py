@@ -1,20 +1,14 @@
 """
-TRAIN COMPARISON MODELS
------------------------
-Trenuje trzy klasyczne modele ML:
-- Neural Network (MLP)
-- SVM (RBF)
-- Random Forest
+TRAIN COMPARISON MODELS (Wine & Concrete)
+-----------------------------------------
+Trenuje trzy klasyczne modele ML dla OBU problemów:
+- Wine Quality (klasyfikacja binarna)
+- Concrete Strength (regresja)
 
-Wyniki zapisywane w formacie zgodnym z ANFIS:
-{
-  "metric_type": "accuracy",
-  "train_accuracy": 0.95,
-  "test_accuracy": 0.91,
-  "train_loss": 0.23,
-  "test_loss": 0.27,
-  ...
-}
+Zapisuje wyniki w osobnych plikach:
+  - nn_wine_results.json, nn_concrete_results.json
+  - svm_wine_results.json, svm_concrete_results.json
+  - rf_wine_results.json, rf_concrete_results.json
 """
 
 import os, json, random, time, pickle
@@ -26,12 +20,11 @@ import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC, SVR
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import (
     accuracy_score, f1_score, roc_auc_score,
-    average_precision_score, confusion_matrix,
-    classification_report, log_loss
+    average_precision_score, log_loss, mean_absolute_error
 )
 
 # ------------------------------------------------------
@@ -44,9 +37,9 @@ random.seed(SEED)
 os.environ["TF_DETERMINISTIC_OPS"] = "1"
 
 RESULTS_DIR = "results"
-MODELS_DIR  = "models"
+MODELS_DIR = "models"
 os.makedirs(RESULTS_DIR, exist_ok=True)
-os.makedirs(MODELS_DIR,  exist_ok=True)
+os.makedirs(MODELS_DIR, exist_ok=True)
 
 
 # ------------------------------------------------------
@@ -55,9 +48,11 @@ os.makedirs(MODELS_DIR,  exist_ok=True)
 def now_suffix():
     return time.strftime("%Y%m%d-%H%M%S")
 
-def ensure_column_vector(y):
+def ensure_column_vector(y, for_classification=False):
     y = np.asarray(y)
-    return y.reshape(-1, 1) if y.ndim == 1 else y
+    if for_classification:
+        return y.reshape(-1, 1) if y.ndim == 1 else y
+    return y.ravel()  # Regresja: wektor 1D
 
 def class_weight_from_labels(y):
     y = np.asarray(y).ravel()
@@ -68,16 +63,27 @@ def class_weight_from_labels(y):
     w_pos = neg / max(pos, 1)
     return {0: 1.0, 1: float(w_pos)}
 
-def load_data():
+def load_wine_data():
+    """Ładuje dane Wine Quality."""
     base = os.path.join("data", "wine-quality") if os.path.exists("data/wine-quality/X_train.npy") else "data"
     X_train = np.load(os.path.join(base, "X_train.npy"))
     y_train = np.load(os.path.join(base, "y_train.npy"))
-    X_test  = np.load(os.path.join(base, "X_test.npy"))
-    y_test  = np.load(os.path.join(base, "y_test.npy"))
-    y_train = ensure_column_vector(y_train).astype(np.float32)
-    y_test  = ensure_column_vector(y_test).astype(np.float32)
+    X_test = np.load(os.path.join(base, "X_test.npy"))
+    y_test = np.load(os.path.join(base, "y_test.npy"))
+    y_train = ensure_column_vector(y_train, for_classification=True).astype(np.float32)
+    y_test = ensure_column_vector(y_test, for_classification=True).astype(np.float32)
     return X_train, y_train, X_test, y_test
 
+def load_concrete_data():
+    """Ładuje dane Concrete Strength z katalogu data/concrete-strength/."""
+    base_dir = "data/concrete-strength"
+    X_train = np.load(os.path.join(base_dir, "X_train.npy"))
+    y_train = np.load(os.path.join(base_dir, "y_train.npy"))
+    X_test = np.load(os.path.join(base_dir, "X_test.npy"))
+    y_test = np.load(os.path.join(base_dir, "y_test.npy"))
+    y_train = ensure_column_vector(y_train, for_classification=False)
+    y_test = ensure_column_vector(y_test, for_classification=False)
+    return X_train, y_train, X_test, y_test
 
 def save_json(obj, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -86,18 +92,20 @@ def save_json(obj, path):
 
 
 # ------------------------------------------------------
-# Neural Network
+# MODELE DLA WINE QUALITY (Klasyfikacja)
 # ------------------------------------------------------
-def train_neural_network():
-    print("\n" + "="*70)
-    print("TRENING: NEURAL NETWORK (MLP)")
-    print("="*70)
+def train_models_for_wine():
+    print("\n🍷 TRENING MODELI DLA WINE QUALITY")
+    X_train, y_train, X_test, y_test = load_wine_data()
+    y_train_r, y_test_r = y_train.ravel(), y_test.ravel()
 
-    X_train, y_train, X_test, y_test = load_data()
+    results = {}
 
+    # --- Neural Network ---
+    print("  - Neural Network")
     scaler = StandardScaler().fit(X_train)
     X_train_s, X_test_s = scaler.transform(X_train), scaler.transform(X_test)
-    pickle.dump(scaler, open(os.path.join(MODELS_DIR, "scaler_nn.pkl"), "wb"))
+    pickle.dump(scaler, open(os.path.join(MODELS_DIR, "scaler_nn_wine.pkl"), "wb"))
 
     model = tf.keras.Sequential([
         tf.keras.layers.Input(shape=(X_train_s.shape[1],)),
@@ -107,108 +115,50 @@ def train_neural_network():
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation="sigmoid")
     ])
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(1e-3),
-        loss="binary_crossentropy",
-        metrics=["accuracy"]
-    )
-
-    ckpt_path = os.path.join(MODELS_DIR, "nn_best.keras")
-    callbacks = [
-        tf.keras.callbacks.ModelCheckpoint(ckpt_path, monitor="val_loss", save_best_only=True, mode="min", verbose=0),
-        tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True, verbose=0),
-    ]
-
-    cw = class_weight_from_labels(y_train)
-    history = model.fit(
-        X_train_s, y_train, validation_split=0.2,
-        epochs=50, batch_size=32, verbose=1,
-        class_weight=cw, callbacks=callbacks
-    )
-
-    # Ewaluacja
+    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    cw = class_weight_from_labels(y_train_r)
+    model.fit(X_train_s, y_train, validation_split=0.2, epochs=50, batch_size=32, verbose=0, class_weight=cw)
     train_loss, train_acc = model.evaluate(X_train_s, y_train, verbose=0)
     test_loss, test_acc = model.evaluate(X_test_s, y_test, verbose=0)
     y_proba = model.predict(X_test_s, verbose=0).ravel()
-    y_pred  = (y_proba >= 0.5).astype(int)
-
-    metrics = {
+    y_pred = (y_proba >= 0.5).astype(int)
+    results['nn'] = {
         "metric_type": "accuracy",
-        "train_loss": float(train_loss),
-        "test_loss": float(test_loss),
         "train_accuracy": float(train_acc),
         "test_accuracy": float(test_acc),
-        "f1": float(f1_score(y_test, y_pred)),
-        "roc_auc": float(roc_auc_score(y_test, y_proba)),
-        "pr_auc": float(average_precision_score(y_test, y_proba)),
+        "train_loss": float(train_loss),
+        "test_loss": float(test_loss),
+        "f1": float(f1_score(y_test_r, y_pred)),
+        "roc_auc": float(roc_auc_score(y_test_r, y_proba)),
     }
+    model.save(os.path.join(MODELS_DIR, "nn_wine.keras"))
+    save_json(results['nn'], os.path.join(RESULTS_DIR, "nn_wine_results.json"))
 
-    save_json(metrics, os.path.join(RESULTS_DIR, "nn_results.json"))
-    model.save(ckpt_path, overwrite=True)
-    print(f"✓ Zapisano: nn_results.json, model, scaler")
-    return model, metrics
-
-
-# ------------------------------------------------------
-# SVM
-# ------------------------------------------------------
-def train_svm():
-    print("\n" + "="*70)
-    print("TRENING: SVM (RBF)")
-    print("="*70)
-
-    X_train, y_train, X_test, y_test = load_data()
-    y_train_r, y_test_r = y_train.ravel(), y_test.ravel()
-
-    clf = make_pipeline(
-        StandardScaler(),
-        SVC(kernel="rbf", C=1.0, gamma="scale", probability=True, random_state=SEED)
-    )
-    clf.fit(X_train, y_train_r)
-
-    y_proba = clf.predict_proba(X_test)[:, 1]
-    y_pred  = (y_proba >= 0.5).astype(int)
-
-    metrics = {
+    # --- SVM ---
+    print("  - SVM")
+    svm = make_pipeline(StandardScaler(), SVC(probability=True, random_state=SEED))
+    svm.fit(X_train, y_train_r)
+    y_proba = svm.predict_proba(X_test)[:, 1]
+    y_pred = (y_proba >= 0.5).astype(int)
+    results['svm'] = {
         "metric_type": "accuracy",
-        "train_accuracy": float(clf.score(X_train, y_train_r)),
+        "train_accuracy": float(svm.score(X_train, y_train_r)),
         "test_accuracy": float(accuracy_score(y_test_r, y_pred)),
-        "train_loss": float(log_loss(y_train_r, clf.predict_proba(X_train)[:, 1])),
+        "train_loss": float(log_loss(y_train_r, svm.predict_proba(X_train)[:, 1])),
         "test_loss": float(log_loss(y_test_r, y_proba)),
         "f1": float(f1_score(y_test_r, y_pred)),
         "roc_auc": float(roc_auc_score(y_test_r, y_proba)),
-        "pr_auc": float(average_precision_score(y_test_r, y_proba))
     }
+    pickle.dump(svm, open(os.path.join(MODELS_DIR, "svm_wine.pkl"), "wb"))
+    save_json(results['svm'], os.path.join(RESULTS_DIR, "svm_wine_results.json"))
 
-    save_json(metrics, os.path.join(RESULTS_DIR, "svm_results.json"))
-    pickle.dump(clf, open(os.path.join(MODELS_DIR, "svm_model.pkl"), "wb"))
-    print("✓ Zapisano: svm_results.json, model.pkl")
-    return clf, metrics
-
-
-# ------------------------------------------------------
-# RANDOM FOREST
-# ------------------------------------------------------
-def train_random_forest():
-    print("\n" + "="*70)
-    print("TRENING: RANDOM FOREST")
-    print("="*70)
-
-    X_train, y_train, X_test, y_test = load_data()
-    y_train_r, y_test_r = y_train.ravel(), y_test.ravel()
-
-    rf = RandomForestClassifier(
-        n_estimators=300, max_depth=None,
-        min_samples_split=5, min_samples_leaf=2,
-        max_features="sqrt", class_weight="balanced",
-        oob_score=True, random_state=SEED, n_jobs=-1
-    )
+    # --- Random Forest ---
+    print("  - Random Forest")
+    rf = RandomForestClassifier(class_weight="balanced", random_state=SEED, n_jobs=-1)
     rf.fit(X_train, y_train_r)
-
     y_proba = rf.predict_proba(X_test)[:, 1]
-    y_pred  = (y_proba >= 0.5).astype(int)
-
-    metrics = {
+    y_pred = (y_proba >= 0.5).astype(int)
+    results['rf'] = {
         "metric_type": "accuracy",
         "train_accuracy": float(rf.score(X_train, y_train_r)),
         "test_accuracy": float(accuracy_score(y_test_r, y_pred)),
@@ -216,39 +166,96 @@ def train_random_forest():
         "test_loss": float(log_loss(y_test_r, y_proba)),
         "f1": float(f1_score(y_test_r, y_pred)),
         "roc_auc": float(roc_auc_score(y_test_r, y_proba)),
-        "pr_auc": float(average_precision_score(y_test_r, y_proba)),
-        "oob_score": float(rf.oob_score_)
     }
+    pickle.dump(rf, open(os.path.join(MODELS_DIR, "rf_wine.pkl"), "wb"))
+    save_json(results['rf'], os.path.join(RESULTS_DIR, "rf_wine_results.json"))
 
-    save_json(metrics, os.path.join(RESULTS_DIR, "rf_results.json"))
-    pickle.dump(rf, open(os.path.join(MODELS_DIR, "rf_model.pkl"), "wb"))
-    np.save(os.path.join(RESULTS_DIR, "rf_feature_importances.npy"), rf.feature_importances_)
-    print("✓ Zapisano: rf_results.json, model.pkl, feature_importances.npy")
-    return rf, metrics
+    print("  ✅ Zakończono Wine")
+    return results
+
+
+# ------------------------------------------------------
+# MODELE DLA CONCRETE STRENGTH (Regresja)
+# ------------------------------------------------------
+def train_models_for_concrete():
+    print("\n🏗️ TRENING MODELI DLA CONCRETE STRENGTH")
+    X_train, y_train, X_test, y_test = load_concrete_data()
+
+    results = {}
+
+    # --- Neural Network ---
+    print("  - Neural Network")
+    scaler = StandardScaler().fit(X_train)
+    X_train_s, X_test_s = scaler.transform(X_train), scaler.transform(X_test)
+    pickle.dump(scaler, open(os.path.join(MODELS_DIR, "scaler_nn_concrete.pkl"), "wb"))
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Input(shape=(X_train_s.shape[1],)),
+        tf.keras.layers.Dense(64, activation="relu"),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(32, activation="relu"),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer="adam", loss="mae")
+    model.fit(X_train_s, y_train, validation_split=0.2, epochs=100, batch_size=32, verbose=0)
+    train_mae = model.evaluate(X_train_s, y_train, verbose=0)
+    test_mae = model.evaluate(X_test_s, y_test, verbose=0)
+    results['nn'] = {
+        "metric_type": "mae",
+        "train_mae": float(train_mae),
+        "test_mae": float(test_mae)
+    }
+    model.save(os.path.join(MODELS_DIR, "nn_concrete.keras"))
+    save_json(results['nn'], os.path.join(RESULTS_DIR, "nn_concrete_results.json"))
+
+    # --- SVM (SVR) ---
+    print("  - SVM (SVR)")
+    svr = make_pipeline(StandardScaler(), SVR(kernel="rbf", C=100, gamma="scale"))
+    svr.fit(X_train, y_train)
+    train_mae = mean_absolute_error(y_train, svr.predict(X_train))
+    test_mae = mean_absolute_error(y_test, svr.predict(X_test))
+    results['svm'] = {
+        "metric_type": "mae",
+        "train_mae": float(train_mae),
+        "test_mae": float(test_mae)
+    }
+    pickle.dump(svr, open(os.path.join(MODELS_DIR, "svm_concrete.pkl"), "wb"))
+    save_json(results['svm'], os.path.join(RESULTS_DIR, "svm_concrete_results.json"))
+
+    # --- Random Forest (Regressor) ---
+    print("  - Random Forest")
+    rf = RandomForestRegressor(random_state=SEED, n_jobs=-1)
+    rf.fit(X_train, y_train)
+    train_mae = mean_absolute_error(y_train, rf.predict(X_train))
+    test_mae = mean_absolute_error(y_test, rf.predict(X_test))
+    results['rf'] = {
+        "metric_type": "mae",
+        "train_mae": float(train_mae),
+        "test_mae": float(test_mae)
+    }
+    pickle.dump(rf, open(os.path.join(MODELS_DIR, "rf_concrete.pkl"), "wb"))
+    save_json(results['rf'], os.path.join(RESULTS_DIR, "rf_concrete_results.json"))
+
+    print("  ✅ Zakończono Concrete")
+    return results
 
 
 # ------------------------------------------------------
 # GŁÓWNY BLOK
 # ------------------------------------------------------
 if __name__ == "__main__":
-    all_results = {}
+    print("TRENING KLASYCZNYCH MODELI ML")
+    print("=================================")
 
-    for name, func in [
-        ("Neural Network", train_neural_network),
-        ("SVM", train_svm),
-        ("Random Forest", train_random_forest),
-    ]:
-        try:
-            _, metrics = func()
-            all_results[name] = metrics
-        except Exception as e:
-            print(f"❌ Błąd podczas trenowania {name}: {e}")
+    try:
+        wine_results = train_models_for_wine()
+    except Exception as e:
+        print(f"Błąd podczas trenowania Wine: {e}")
 
-    print("\n" + "="*80)
-    print("PODSUMOWANIE TESTOWE:")
-    print("="*80)
-    for name, res in all_results.items():
-        acc = res.get("test_accuracy", np.nan)
-        loss = res.get("test_loss", np.nan)
-        auc = res.get("roc_auc", np.nan)
-        print(f"{name:<20} ACC={acc:.4f} | LOSS={loss:.4f} | AUC={auc:.4f}")
+    try:
+        concrete_results = train_models_for_concrete()
+    except Exception as e:
+        print(f"Błąd podczas trenowania Concrete: {e}")
+
+    print("\nWszystkie modele zostały wytrenowane i zapisane w 'results/' oraz 'models/'.")

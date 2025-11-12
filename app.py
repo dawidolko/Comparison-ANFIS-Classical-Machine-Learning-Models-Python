@@ -245,12 +245,14 @@ def show_comparison():
     st.title("📊 Porównanie Modeli")
     st.markdown("### ANFIS vs Neural Network vs SVM vs Random Forest")
 
-    if not display_image_if_exists("results/model_comparison_bar.png"):
-        st.warning("⚠ Brak wykresów porównawczych — uruchom ./setup.sh")
+    problem = st.radio("Wybierz problem:", ["Wine Quality", "Concrete Strength"], horizontal=True)
 
-    if display_image_if_exists("results/overfitting_analysis.png"):
-        st.markdown("---")
-        st.subheader("🔍 Analiza Overfittingu")
+    if problem == "Wine Quality":
+        display_image_if_exists("results/model_comparison_bar_wine.png", "Porównanie modeli — Wine Quality")
+        display_image_if_exists("results/overfitting_analysis_wine.png", "Analiza overfittingu — Wine Quality")
+    else:
+        display_image_if_exists("results/model_comparison_bar_concrete.png", "Porównanie modeli — Concrete Strength")
+        display_image_if_exists("results/overfitting_analysis_concrete.png", "Analiza overfittingu — Concrete Strength")
 
 
 # -------------------------------------------------------------
@@ -262,28 +264,38 @@ def show_data_analysis():
     problem = st.selectbox("Wybierz problem:", ["Wine Quality", "Concrete Strength"], key="analysis_problem")
 
     if problem == "Wine Quality":
+        st.markdown("### UCI Wine Quality Dataset — Eksploracja")
+
         imgs = [
             "results/wine_class_distribution.png",
             "results/wine_correlation.png",
             "results/wine_feature_distributions.png",
             "results/wine_pairplot.png"
         ]
-        st.markdown("### UCI Wine Quality Dataset — Eksploracja")
+
     else:
-        imgs = [
-            "results/concrete_distribution.png",
-            "results/concrete_correlation.png"
-        ]
         st.markdown("### Concrete Strength Dataset — Eksploracja")
 
-    found = False
-    for img_path in imgs:
-        if display_image_if_exists(img_path):
-            st.markdown("---")
-            found = True
+        imgs = [
+            "results/concrete_target_distribution.png",      
+            "results/concrete_correlation.png",
+            "results/concrete_feature_distributions.png",    
+            "results/concrete_pairplot.png"                  
+        ]
 
-    if not found:
-        st.warning("⚠ Brak wykresów analizy danych — uruchom ./setup.sh")
+    # --- wyświetlanie wykresów ---
+    missing = []
+    for img_path in imgs:
+        if os.path.exists(img_path):
+            st.markdown("---")
+            display_image_if_exists(img_path)
+        else:
+            missing.append(img_path)
+            print(f"[WARN] Brak pliku wykresu: {img_path}")  # log do konsoli
+
+    if missing:
+        st.warning(f"Brakuje {len(missing)} wykresów: {', '.join(os.path.basename(m) for m in missing)}")
+
 
 
 # -------------------------------------------------------------
