@@ -76,24 +76,63 @@ if red_wine is not None and white_wine is not None:
     print(f"Rozkład klas: {wine_data['quality_binary'].value_counts().to_dict()}")
 
     # --- (1) Distribution of Target (Quality) ---
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    axes[0].hist(wine_data["quality"], bins=10, edgecolor="black", color="steelblue")
-    axes[0].set_title("Distribution of Wine Quality Scores")
-    axes[0].set_xlabel("Quality Score")
-    axes[0].set_ylabel("Count")
+    """
+    Figure 1: Wine Quality Class Distribution
+    
+    Left plot: HISTOGRAM of original quality scores (0-10)
+      - Bin count: 10 bins (one per quality score)
+      - X-axis: Quality score (integer 0-10)
+      - Y-axis: Frequency count (number of samples)
+      - Method: Matplotlib hist() with bins=10, each bin represents one quality level
+    
+    Right plot: BAR CHART of binarized classes
+      - Two bars: Class 0 (Low quality, score ≤5) and Class 1 (High quality, score >5)
+      - X-axis: Binary class labels
+      - Y-axis: Count of samples in each class
+      - Purpose: Show class imbalance for binary classification task
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Left: Histogram of raw quality scores
+    axes[0].hist(wine_data["quality"], bins=10, edgecolor="black", color="steelblue", alpha=0.8)
+    axes[0].set_title("Distribution of Wine Quality Scores\n(Histogram: 10 bins, 1 per score)", fontsize=12, fontweight='bold')
+    axes[0].set_xlabel("Quality Score (0-10)", fontsize=11, fontweight='bold')
+    axes[0].set_ylabel("Frequency (Count)", fontsize=11, fontweight='bold')
+    axes[0].grid(True, alpha=0.3, axis='y')
+    
+    # Add count labels on bars
+    counts, bins, patches = axes[0].hist(wine_data["quality"], bins=10, edgecolor="black", color="steelblue", alpha=0.8)
+    for i, (count, patch) in enumerate(zip(counts, patches)):
+        if count > 0:
+            axes[0].text(patch.get_x() + patch.get_width()/2, patch.get_height() + 50, 
+                        int(count), ha='center', va='bottom', fontsize=9, fontweight='bold')
 
-    axes[1].bar(
+    # Right: Bar chart of binary classes
+    class_counts = wine_data["quality_binary"].value_counts().sort_index()
+    bars = axes[1].bar(
         [0, 1],
-        wine_data["quality_binary"].value_counts().sort_index().values,
+        class_counts.values,
         color=["salmon", "lightgreen"],
-        edgecolor="black"
+        edgecolor="black",
+        width=0.6,
+        alpha=0.8
     )
     axes[1].set_xticks([0, 1])
-    axes[1].set_xticklabels(["Low (≤5)", "High (>5)"])
-    axes[1].set_title("Binary Classification Distribution")
-    for ax in axes:
-        ax.grid(True, alpha=0.3)
-    save_plot(fig, "wine_target_distribution.png")
+    axes[1].set_xticklabels(["Low (≤5)", "High (>5)"], fontsize=10)
+    axes[1].set_xlabel("Binary Class", fontsize=11, fontweight='bold')
+    axes[1].set_ylabel("Count", fontsize=11, fontweight='bold')
+    axes[1].set_title("Binary Classification Distribution\n(Bar Chart: 2 classes)", fontsize=12, fontweight='bold')
+    axes[1].grid(True, alpha=0.3, axis='y')
+    
+    # Add count labels on bars
+    for i, bar in enumerate(bars):
+        height = bar.get_height()
+        axes[1].text(bar.get_x() + bar.get_width()/2, height + 50,
+                    f'{int(height)}\n({100*height/len(wine_data):.1f}%)',
+                    ha='center', va='bottom', fontsize=10, fontweight='bold')
+    
+    plt.suptitle("Wine Quality Dataset - Target Variable Analysis", fontsize=14, fontweight='bold', y=0.98)
+    save_plot(fig, "wine_class_distribution.png")
 
     # --- (2) Correlation Matrix ---
     fig, ax = plt.subplots(figsize=(12, 10))

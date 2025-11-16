@@ -150,57 +150,184 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
 # WIZUALIZACJE
 # -------------------------------------------------------------
 def plot_training_history(history, n_memb, dataset):
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    """
+    Training history visualization.
+    
+    For CLASSIFICATION (wine):
+      - Top row: Accuracy + Loss curves (train vs validation)
+      - Bottom row: Per-epoch metrics table preview
+    
+    For REGRESSION (concrete):
+      - MAE + Loss curves (train vs validation)
+    """
+    fig = plt.figure(figsize=(16, 6))
+    gs = fig.add_gridspec(2, 2, height_ratios=[3, 1])
 
+    # Determine metric type
     if "accuracy" in history.history:
-        mkey, vkey, label = "accuracy", "val_accuracy", "Dokładność"
+        mkey, vkey, label = "accuracy", "val_accuracy", "Accuracy"
+        is_classification = True
     elif "mae" in history.history:
         mkey, vkey, label = "mae", "val_mae", "MAE"
+        is_classification = False
     else:
         mkey = None
+        is_classification = False
 
+    # Top-left: Primary metric (Accuracy/MAE)
+    ax0 = fig.add_subplot(gs[0, 0])
     if mkey:
-        axes[0].plot(history.history[mkey], label="Train", lw=2)
-        axes[0].plot(history.history[vkey], label="Validation", lw=2)
-        axes[0].set_title(f"{label} ({dataset}, {n_memb} MF)")
-        axes[0].set_xlabel("Epoka")
-        axes[0].set_ylabel(label)
-        axes[0].legend()
-        axes[0].grid(True, alpha=0.3)
+        epochs = np.arange(1, len(history.history[mkey]) + 1)
+        ax0.plot(epochs, history.history[mkey], label="Train", lw=2.5, marker='o', markersize=4, color='steelblue')
+        ax0.plot(epochs, history.history[vkey], label="Validation", lw=2.5, marker='s', markersize=4, color='coral')
+        ax0.set_title(f"{label} Curve ({dataset}, {n_memb} MF)", fontsize=13, fontweight='bold')
+        ax0.set_xlabel("Epoch", fontsize=11, fontweight='bold')
+        ax0.set_ylabel(label, fontsize=11, fontweight='bold')
+        ax0.legend(fontsize=10, loc='best')
+        ax0.grid(True, alpha=0.3)
+        
+        # Highlight best epoch
+        best_epoch = np.argmax(history.history[vkey]) if is_classification else np.argmin(history.history[vkey])
+        best_value = history.history[vkey][best_epoch]
+        ax0.scatter([best_epoch + 1], [best_value], color='red', s=100, zorder=5, label=f'Best Epoch: {best_epoch + 1}')
+        ax0.legend(fontsize=10, loc='best')
 
-    axes[1].plot(history.history["loss"], label="Train", lw=2)
-    axes[1].plot(history.history["val_loss"], label="Validation", lw=2)
-    axes[1].set_title(f"Strata ({dataset}, {n_memb} MF)")
-    axes[1].set_xlabel("Epoka")
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
+    # Top-right: Loss curve
+    ax1 = fig.add_subplot(gs[0, 1])
+    epochs = np.arange(1, len(history.history["loss"]) + 1)
+    ax1.plot(epochs, history.history["loss"], label="Train", lw=2.5, marker='o', markersize=4, color='darkgreen')
+    ax1.plot(epochs, history.history["val_loss"], label="Validation", lw=2.5, marker='s', markersize=4, color='darkred')
+    ax1.set_title(f"Loss Curve ({dataset}, {n_memb} MF)", fontsize=13, fontweight='bold')
+    ax1.set_xlabel("Epoch", fontsize=11, fontweight='bold')
+    ax1.set_ylabel("Loss (MSE/BCE)", fontsize=11, fontweight='bold')
+    ax1.legend(fontsize=10, loc='best')
+    ax1.grid(True, alpha=0.3)
+    
+    # Bottom: Metrics table (sample of epochs)
+    ax2 = fig.add_subplot(gs[1, :])
+    ax2.axis('off')
+    
+    # Create table data (show every 5th epoch + last epoch)
+    total_epochs = len(history.history["loss"])
+    sample_epochs = list(range(0, total_epochs, 5)) + [total_epochs - 1]
+    sample_epochs = sorted(set(sample_epochs))[:8]  # Max 8 epochs
+    
+    if mkey:
+        table_data = [
+            ["Epoch"] + [str(e + 1) for e in sample_epochs],
+            ["Train " + label] + [f"{history.history[mkey][e]:.4f}" for e in sample_epochs],
+            ["Val " + label] + [f"{history.history[vkey][e]:.4f}" for e in sample_epochs],
+            ["Train Loss"] + [f"{history.history['loss'][e]:.4f}" for e in sample_epochs],
+            ["Val Loss"] + [f"{history.history['val_loss'][e]:.4f}" for e in sample_epochs]
+        ]
+    else:
+        table_data = [
+            ["Epoch"] + [str(e + 1) for e in sample_epochs],
+            ["Train Loss"] + [f"{history.history['loss'][e]:.4f}" for e in sample_epochs],
+            ["Val Loss"] + [f"{history.history['val_loss'][e]:.4f}" for e in sample_epochs]
+        ]
+    
+    table = ax2.table(cellText=table_data, cellLoc='center', loc='center', 
+                     colWidths=[0.12] * len(table_data[0]))
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    table.scale(1, 2)
+    
+    # Color header row
+    for i in range(len(table_data[0])):
+        table[(0, i)].set_facecolor('#4CAF50')
+        table[(0, i)].set_text_props(weight='bold', color='white')
 
+    plt.suptitle(f"Training History: {dataset.upper()} ({n_memb} Membership Functions)", 
+                 fontsize=14, fontweight='bold', y=0.98)
     plt.tight_layout()
     plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_training.png", dpi=300, bbox_inches="tight")
     plt.close()
 
 
 def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
+    """
+    Visualization of model fit on training data.
+    
+    For REGRESSION (concrete):
+      - Left: Predicted vs Actual scatter plot with ideal fit line (y=x)
+      - Right: Residual distribution histogram
+    
+    For CLASSIFICATION (wine):
+      - Left: Confusion matrix heatmap
+      - Right: Prediction probability distribution by class
+    """
     preds = model(X_train).reshape(-1)
     fig, ax = plt.subplots(1, 2, figsize=(14, 5))
 
     if dataset == "concrete":
-        ax[0].scatter(y_train, preds, s=8, alpha=0.6)
-        ax[0].plot([y_train.min(), y_train.max()], [y_train.min(), y_train.max()], "r--")
-        ax[0].set_xlabel("Rzeczywista wytrzymałość (MPa)")
-        ax[0].set_ylabel("Predykcja ANFIS")
-        ax[0].set_title("Concrete - Dopasowanie modelu")
-        ax[1].hist(y_train - preds, bins=30, color="gray", alpha=0.7)
-        ax[1].set_title("Rozkład błędów (y_true - y_pred)")
+        # REGRESSION: Scatter plot with ideal fit line
+        ax[0].scatter(y_train, preds, s=15, alpha=0.5, color='steelblue', edgecolors='navy', linewidth=0.5)
+        
+        # Perfect prediction line (y = x)
+        min_val, max_val = y_train.min(), y_train.max()
+        ax[0].plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Fit (y=x)')
+        
+        ax[0].set_xlabel("True Compressive Strength (MPa)", fontsize=11, fontweight='bold')
+        ax[0].set_ylabel("ANFIS Prediction (MPa)", fontsize=11, fontweight='bold')
+        ax[0].set_title(f"Regression Fit: Predicted vs Actual\n({dataset}, {n_memb} MF)", fontsize=12, fontweight='bold')
+        ax[0].legend(fontsize=10)
+        ax[0].grid(True, alpha=0.3)
+        
+        # Add R² text
+        from sklearn.metrics import r2_score
+        r2 = r2_score(y_train, preds)
+        ax[0].text(0.05, 0.95, f'R² = {r2:.4f}', transform=ax[0].transAxes, 
+                   fontsize=11, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        # Residuals histogram
+        residuals = y_train - preds
+        ax[1].hist(residuals, bins=40, color='coral', alpha=0.7, edgecolor='darkred')
+        ax[1].axvline(x=0, color='red', linestyle='--', linewidth=2, label='Zero Error')
+        ax[1].set_xlabel("Residuals (True - Predicted)", fontsize=11, fontweight='bold')
+        ax[1].set_ylabel("Frequency", fontsize=11, fontweight='bold')
+        ax[1].set_title(f"Residual Distribution\nMean={residuals.mean():.2f}, Std={residuals.std():.2f}", 
+                        fontsize=12, fontweight='bold')
+        ax[1].legend(fontsize=10)
+        ax[1].grid(True, alpha=0.3, axis='y')
     else:
-        ax[0].scatter(np.arange(len(y_train)), y_train, s=8, label="y_true", alpha=0.6)
-        ax[0].scatter(np.arange(len(preds)), preds, s=8, label="y_pred", alpha=0.6)
-        ax[0].set_title("Dopasowanie ANFIS na treningu")
-        ax[0].legend()
-        ax[1].hist(preds[y_train == 0], bins=30, alpha=0.7, label="y=0")
-        ax[1].hist(preds[y_train == 1], bins=30, alpha=0.7, label="y=1")
-        ax[1].set_title("Rozkład predykcji (train)")
-        ax[1].legend()
+        # CLASSIFICATION: Confusion Matrix + Probability Distribution
+        from sklearn.metrics import confusion_matrix
+        
+        # Binarize predictions (threshold = 0.5)
+        y_pred_class = (preds > 0.5).astype(int)
+        cm = confusion_matrix(y_train, y_pred_class)
+        
+        # Confusion Matrix Heatmap
+        im = ax[0].imshow(cm, interpolation='nearest', cmap='Blues')
+        ax[0].figure.colorbar(im, ax=ax[0])
+        ax[0].set_xticks([0, 1])
+        ax[0].set_yticks([0, 1])
+        ax[0].set_xticklabels(['Low (0)', 'High (1)'], fontsize=10)
+        ax[0].set_yticklabels(['Low (0)', 'High (1)'], fontsize=10)
+        ax[0].set_xlabel('Predicted Class', fontsize=11, fontweight='bold')
+        ax[0].set_ylabel('True Class', fontsize=11, fontweight='bold')
+        ax[0].set_title(f'Confusion Matrix (Train)\n({dataset}, {n_memb} MF)', fontsize=12, fontweight='bold')
+        
+        # Add text annotations
+        for i in range(2):
+            for j in range(2):
+                text = ax[0].text(j, i, f'{cm[i, j]}', ha="center", va="center", 
+                                 color="white" if cm[i, j] > cm.max() / 2 else "black", fontsize=14, fontweight='bold')
+        
+        # Prediction probability distribution by true class
+        ax[1].hist(preds[y_train == 0], bins=30, alpha=0.7, label='True Class 0 (Low)', color='salmon', edgecolor='darkred')
+        ax[1].hist(preds[y_train == 1], bins=30, alpha=0.7, label='True Class 1 (High)', color='lightgreen', edgecolor='darkgreen')
+        ax[1].axvline(x=0.5, color='black', linestyle='--', linewidth=2, label='Decision Threshold (0.5)')
+        ax[1].set_xlabel("Predicted Probability", fontsize=11, fontweight='bold')
+        ax[1].set_ylabel("Frequency", fontsize=11, fontweight='bold')
+        ax[1].set_title(f"Prediction Distribution by True Class\n(Bins=30)", fontsize=12, fontweight='bold')
+        ax[1].legend(fontsize=9)
+        ax[1].grid(True, alpha=0.3, axis='y')
+
+    plt.tight_layout()
+    plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_fit_train.png", dpi=300, bbox_inches="tight")
+    plt.close()
 
     for a in ax:
         a.grid(True, alpha=0.3)
