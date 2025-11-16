@@ -20,14 +20,16 @@ from anfis import ANFISModel
 # =====================================================
 def load_anfis_model(weights_path: str) -> Optional[ANFISModel]:
     """
-    Ładuje model ANFIS z pliku wag (.h5, .weights.h5, .keras)
-    Automatycznie wykrywa liczbę wejść i funkcji przynależności.
-
+    Ładuje wytrenowany model ANFIS z pliku wag.
+    
+    Automatycznie wykrywa konfigurację modelu (liczbę wejść i funkcji przynależności)
+    poprzez analizę struktury pliku HDF5.
+    
     Args:
-        weights_path: ścieżka do pliku wag
-
+        weights_path: ścieżka do pliku z wagami (.h5, .weights.h5, .keras)
+        
     Returns:
-        ANFISModel lub None
+        Zrekonstruowany obiekt ANFISModel lub None w przypadku błędu
     """
     try:
         if not os.path.exists(weights_path):
@@ -85,11 +87,16 @@ def load_anfis_model(weights_path: str) -> Optional[ANFISModel]:
 # =====================================================
 def load_results() -> Dict[str, Any]:
     """
-    Ładuje wyniki wszystkich modeli z katalogu results/.
-    Obsługuje zarówno klasyfikację (wine), jak i regresję (concrete).
-
+    Ładuje wyniki wszystkich wytrenowanych modeli z katalogu results/.
+    
+    Obsługuje:
+    - Modele ANFIS (klasyfikacja wine + regresja concrete)
+    - Modele porównawcze (Neural Network, SVM, Random Forest)
+    
+    Wyniki są wczytywane z plików JSON i zwracane jako słownik.
+    
     Returns:
-        dict: {nazwa_modelu: dane_json}
+        Dict[nazwa_modelu, dane_json] - słownik z wynikami wszystkich modeli
     """
     results = {}
     base_dir = "results"

@@ -1,138 +1,299 @@
-# 🤖 ANFIS vs Classical Machine Learning Models# 📚 README - Projekt: Klasyfikacja Jakości Wina za pomocą ANFIS
+# 🤖 ANFIS vs Classical Machine Learning Models
 
-Comprehensive comparison of **ANFIS (Adaptive Neuro-Fuzzy Inference System)** with classical machine learning algorithms on two real-world datasets.## 📋 Spis treści
+Comprehensive comparison of **ANFIS (Adaptive Neuro-Fuzzy Inference System)** with classical machine learning algorithms on two real-world datasets.
 
----1. [Opis projektu](#opis-projektu)
+---
 
-2. [Struktura projektu](#struktura-projektu)
+## 📊 Datasets
 
-## 📊 Datasets3. [Wymagania](#wymagania)
+### 1. **Wine Quality Classification** 🍷
 
-4. [Instrukcja uruchomienia](#instrukcja-uruchomienia)
-
-### 1. **Wine Quality Classification** 🍷5. [Opis plików](#opis-plików)
-
-- **Source**: [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/wine+quality)6. [Wyniki](#wyniki)
-
+- **Source**: [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/wine+quality)
 - **Samples**: 6,497 (1,599 red + 4,898 white)
-
-- **Features**: 11 physicochemical properties---
-
+- **Features**: 11 physicochemical properties
   - Fixed acidity, volatile acidity, citric acid
-
-  - Residual sugar, chlorides## 🎯 Opis projektu
-
+  - Residual sugar, chlorides
   - Free/total sulfur dioxide
-
-  - Density, pH, sulphates, alcoholProjekt porównuje algorytm **ANFIS (Adaptive Neuro-Fuzzy Inference System)** z klasycznymi metodami uczenia maszynowego w zadaniu klasyfikacji jakości wina. ANFIS to hybrydowy model łączący:
-
+  - Density, pH, sulphates, alcohol
 - **Task**: Binary classification (quality > 5 vs ≤ 5)
-
-- **Variants**: - **Logikę rozmytą** - interpretowalne reguły IF-THEN
-
-  - `all`: Combined red + white wines- **Sieci neuronowe** - uczenie parametrów za pomocą propagacji wstecznej
-
+- **Variants**:
+  - `all`: Combined red + white wines
   - `red`: Red wines only
+  - `white`: White wines only
 
-  - `white`: White wines only### Główne cele:
+### 2. **Concrete Compressive Strength Prediction** 🏗️
 
-### 2. **Concrete Compressive Strength Prediction** 🏗️✅ Implementacja algorytmu ANFIS w TensorFlow/Keras
-
-- **Source**: [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Concrete+Compressive+Strength)✅ Porównanie ANFIS z klasycznymi modelami (NN, SVM, Random Forest)
-
-- **Samples**: 1,030✅ Analiza interpretowalności modelu rozmytego
-
-- **Features**: 8 components✅ Wizualizacja wyuczonych funkcji przynależności
-
+- **Source**: [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Concrete+Compressive+Strength)
+- **Samples**: 1,030
+- **Features**: 8 components
   - Cement, blast furnace slag, fly ash
-
-  - Water, superplasticizer---
-
+  - Water, superplasticizer
   - Coarse/fine aggregate, age (days)
+- **Task**: Regression (predict compressive strength in MPa)
 
-- **Task**: Regression (predict compressive strength in MPa)## 📁 Struktura projektu
+---
 
----```
+## 🧠 Models Compared
 
-wine_quality_anfis/
+| Model              | Type           | Configuration                       |
+| ------------------ | -------------- | ----------------------------------- |
+| **ANFIS**          | Neuro-Fuzzy    | 2 & 3 Gaussian membership functions |
+| **Neural Network** | Deep Learning  | Multi-layer perceptron              |
+| **SVM**            | Kernel Methods | RBF kernel                          |
+| **Random Forest**  | Ensemble       | 300 trees                           |
 
-## 🧠 Models Compared├── data/ # Dane (generowane automatycznie)
+---
 
-│ ├── winequality-red.csv # Dataset wina czerwonego
+## 🏗️ ANFIS Architecture
 
-| Model | Type | Configuration |│ ├── winequality-white.csv # Dataset wina białego
+**5-Layer Takagi-Sugeno-Kang System:**
 
-|-------|------|---------------|│ ├── winequality.names # Opis datasetu
+```
+Input → Fuzzy Layer → Rule Layer → Norm Layer → Defuzz Layer → Output
+```
 
-| **ANFIS** | Neuro-Fuzzy | 2 & 3 Gaussian membership functions |│ ├── wine-quality/ # katalog z surowymi CSV i przetworzonymi NPY
+1. **Fuzzy Layer**: Gaussian membership functions
 
-| **Neural Network** | Deep Learning | Multi-layer perceptron |│ │ ├── winequality-red.csv # źródłowy dataset czerwonego wina
+   - μ(x) = exp(-(x-c)²/(2σ²))
+   - Each feature: 2 or 3 MFs
 
-| **SVM** | Kernel Methods | RBF kernel |│ │ ├── winequality-white.csv # źródłowy dataset białego wina
+2. **Rule Layer**: Fuzzy rule generation
 
-| **Random Forest** | Ensemble | 300 trees |│ │ ├── X_train.npy # (generowane, przetworzone dane treningowe)
+   - Rules = n_memb ^ n_features
+   - Example: 11 features × 2 MF = 2,048 rules
 
-│ │ ├── X_test.npy # (generowane, przetworzone dane testowe)
+3. **Norm Layer**: Rule weight normalization
 
----│ │ ├── y_train.npy # (generowane)
+4. **Defuzz Layer**: TSK-type defuzzification
 
-│ │ └── y_test.npy # (generowane)
+   - f_i = w₀ + w₁x₁ + ... + wₙxₙ
 
-## 🏗️ ANFIS Architecture├── models/ # Wytrenowane modele (generowane)
+5. **Summation Layer**: Weighted output aggregation
 
-│ ├── anfis_best_2memb.weights.h5
+---
 
-**5-Layer Takagi-Sugeno-Kang System:**│ ├── anfis_best_3memb.weights.h5
+## 🚀 Quick Start
 
-│ ├── nn_best.keras
+### Prerequisites
 
-````│ ├── svm_model.pkl
+- Python 3.8+ (tested on 3.12)
+- pip package manager
+- 4GB RAM minimum
+- ~1GB disk space
 
-Input Layer → Fuzzy Layer → Rule Layer → Norm Layer → Defuzz Layer → Output│   ├── rf_model.pkl
+### One-Command Setup
 
-```│   ├── scaler.pkl                # Scaler dla ANFIS (11 cech)
+**Linux/macOS:**
 
-│   └── scaler_nn.pkl             # Scaler dla NN/SVM/RF (12 cech)
+```bash
+chmod +x setup.sh
+./setup.sh
+```
 
-1. **Fuzzy Layer**: Gaussian membership functions├── results/                       # Wykresy i wyniki (generowane)
+**Windows:**
 
-   - μ(x) = exp(-(x-c)²/(2σ²))│   ├── all_models_comparison.png
+```bash
+setup.bat
+```
 
-   - Each feature: 2 or 3 MFs│   ├── overfitting_analysis.png
+This single command will:
 
-│   ├── anfis_2memb_training.png
+1. Create virtual environment
+2. Install all dependencies
+3. Preprocess both datasets
+4. Train ANFIS models (all variants)
+5. Perform 5-fold cross-validation
+6. Visualize membership functions
+7. Generate data exploration plots
+8. Train comparison models (NN, SVM, RF)
+9. Create comparison charts
+10. Launch Streamlit GUI at `http://localhost:8501`
 
-2. **Rule Layer**: Fuzzy rule generation│   ├── anfis_3memb_training.png
+**⏱️ Estimated time**: 15-30 minutes (depending on your CPU)
 
-   - Rules = n_memb ^ n_features│   ├── membership_functions_visualization.png
+---
 
-   - Example: 11 features × 2 MF = 2,048 rules│   └── *.json (wyniki liczbowe)
+## 📁 Project Structure
 
-├── anfis.py                       # ⚙️ Implementacja ANFIS
+```
+├── setup.sh / setup.bat          # Automated setup script
+├── requirements.txt               # Python dependencies
+│
+├── data/                          # Raw datasets
+│   ├── wine-quality/
+│   │   ├── winequality-red.csv
+│   │   └── winequality-white.csv
+│   └── concrete-strength/
+│       └── Concrete_Data.csv
+│
+├── anfis.py                       # ANFIS core implementation
+├── data_preprocessing.py          # Data loading & normalization
+├── train_anfis.py                 # ANFIS training pipeline
+├── train_comparison_models.py     # Train NN, SVM, RF
+├── compare_all_models.py          # Generate comparison plots
+├── visualize_membership_functions.py
+├── data_exploration.py            # EDA visualizations
+│
+├── app.py                         # Streamlit web interface
+│
+├── models/                        # Trained model weights
+└── results/                       # Generated plots & metrics
+```
 
-3. **Norm Layer**: Rule weight normalization├── data_exploration.py            # 📊 Eksploracja danych
+---
 
-├── data_preprocessing.py          # 🔄 Przygotowanie danych
+## 📊 Results & Visualizations
 
-4. **Defuzz Layer**: TSK-type defuzzification├── train_anfis.py                 # 🧠 Trening modeli ANFIS
+The automated pipeline generates:
 
-   - f_i = w₀ + w₁x₁ + ... + wₙxₙ├── train_comparison_models.py     # 🤖 Trening modeli porównawczych
+### ANFIS Results (per dataset × MF configuration):
 
-├── compare_all_models.py          # 📈 Porównanie wyników
+- Training curves (accuracy/MAE + loss)
+- Prediction scatter plots
+- Membership function plots
+- Cross-validation metrics (5-fold)
+- Fuzzy rule extraction (top-K rules)
 
-5. **Summation Layer**: Weighted output aggregation├── visualize_membership_functions.py  # 📉 Wizualizacja funkcji przynależności
+### Data Exploration:
 
-├── utils.py                       # 🛠️ Funkcje pomocnicze (NOWE v1.1.0)
+- Class/target distribution plots
+- Feature correlation heatmaps
+- Feature distribution histograms
+- Pairplots for key features
 
----├── scaller.py                     # 📐 Ładowanie scalerów (NOWE v1.1.0)
+### Model Comparison:
 
-├── app.py                         # 🍷 Interfejs Streamlit
+- Accuracy/MAE bar charts
+- Overfitting analysis (train-test gap)
+- Performance ranking table
 
-## 🚀 Quick Start├── main.py                        # 🚀 Główny pipeline
+---
 
-├── requirements.txt               # 📦 Zależności
+## 🎯 Key Features
 
-### Prerequisites└── .gitignore                     # 🚫 Pliki ignorowane przez Git
+✅ **Fully Automated**: Single command setup  
+✅ **Two Problem Types**: Classification + Regression  
+✅ **Multiple Datasets**: 4 configurations (concrete, all, red, white)  
+✅ **Cross-Validation**: 5-fold stratified/standard  
+✅ **Interactive GUI**: Streamlit web dashboard  
+✅ **Rule Extraction**: Interpretable fuzzy rules  
+✅ **Comprehensive Comparison**: 4 ML algorithms  
+✅ **Publication-Ready Plots**: 300 DPI PNG exports
+
+---
+
+## 🔬 Technical Details
+
+### Preprocessing
+
+- **Wine**: StandardScaler per dataset variant, 80/20 split
+- **Concrete**: StandardScaler, 80/20 split
+- **ANFIS Input Range**: Normalized to [-3, 3]
+
+### Training Configuration
+
+- **Optimizer**: Nadam (lr=0.001)
+- **Epochs**: 20 (early stopping patience=10)
+- **Batch Size**: 32
+- **Loss Functions**:
+  - Wine: Binary crossentropy
+  - Concrete: Mean Squared Error
+
+### Cross-Validation
+
+- **Wine**: 5-fold Stratified (preserves class balance)
+- **Concrete**: 5-fold Standard (regression)
+
+---
+
+## 📖 Documentation
+
+- **[MANUAL_INSTRUCTION.md](MANUAL_INSTRUCTION.md)**: Detailed step-by-step installation guide
+- **Code Documentation**: All functions have Polish docstrings
+
+---
+
+## 👥 Authors
+
+- **Dawid Olko** - Project Lead
+- **Piotr Smoła** - ML Implementation
+- **Jakub Opar** - Data Analysis
+- **Michał Pilecki** - Visualization
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 📚 References
+
+1. **ANFIS**: J.-S. R. Jang, "ANFIS: adaptive-network-based fuzzy inference system," IEEE Transactions on Systems, Man, and Cybernetics, vol. 23, no. 3, pp. 665-685, 1993.
+2. **Wine Quality Dataset**: P. Cortez et al., "Modeling wine preferences by data mining from physicochemical properties," Decision Support Systems, 2009.
+3. **Concrete Dataset**: I-C. Yeh, "Modeling of strength of high-performance concrete using artificial neural networks," Cement and Concrete Research, 1998.
+
+---
+
+## 🐛 Troubleshooting
+
+**Issue**: Streamlit doesn't launch automatically  
+**Solution**: Manually run `streamlit run app.py` after setup completes
+
+**Issue**: TensorFlow installation fails  
+**Solution**: Ensure Python 3.8-3.12. TensorFlow 2.17 not compatible with 3.13+
+
+**Issue**: Out of memory during training  
+**Solution**: Reduce batch size in `train_anfis.py` (line 95: `batch_size=16`)
+
+---
+
+## ⭐ Star This Repo!
+
+If this project helped your research or learning, please consider giving it a star ⭐
+
+**Questions?** Open an issue on GitHub!
+
+1. **Fuzzy Layer**: Gaussian membership functions├── results/ # Wykresy i wyniki (generowane)
+
+   - μ(x) = exp(-(x-c)²/(2σ²))│ ├── all_models_comparison.png
+
+   - Each feature: 2 or 3 MFs│ ├── overfitting_analysis.png
+
+│ ├── anfis_2memb_training.png
+
+2. **Rule Layer**: Fuzzy rule generation│ ├── anfis_3memb_training.png
+
+   - Rules = n_memb ^ n_features│ ├── membership_functions_visualization.png
+
+   - Example: 11 features × 2 MF = 2,048 rules│ └── \*.json (wyniki liczbowe)
+
+├── anfis.py # ⚙️ Implementacja ANFIS
+
+3. **Norm Layer**: Rule weight normalization├── data_exploration.py # 📊 Eksploracja danych
+
+├── data_preprocessing.py # 🔄 Przygotowanie danych
+
+4. **Defuzz Layer**: TSK-type defuzzification├── train_anfis.py # 🧠 Trening modeli ANFIS
+
+   - f_i = w₀ + w₁x₁ + ... + wₙxₙ├── train_comparison_models.py # 🤖 Trening modeli porównawczych
+
+├── compare_all_models.py # 📈 Porównanie wyników
+
+5. **Summation Layer**: Weighted output aggregation├── visualize_membership_functions.py # 📉 Wizualizacja funkcji przynależności
+
+├── utils.py # 🛠️ Funkcje pomocnicze (NOWE v1.1.0)
+
+---├── scaller.py # 📐 Ładowanie scalerów (NOWE v1.1.0)
+
+├── app.py # 🍷 Interfejs Streamlit
+
+## 🚀 Quick Start├── main.py # 🚀 Główny pipeline
+
+├── requirements.txt # 📦 Zależności
+
+### Prerequisites└── .gitignore # 🚫 Pliki ignorowane przez Git
 
 - Python 3.8+ (tested on 3.12)```
 
@@ -146,11 +307,9 @@ Input Layer → Fuzzy Layer → Rule Layer → Norm Layer → Defuzz Layer → O
 
 ### One-Command Setup- 🆕 **NOWE w v1.1.0:** Moduły `utils.py` i `scaller.py` do separacji logiki biznesowej
 
-
-
 **Linux/macOS:**---
 
-```bash
+````bash
 
 chmod +x setup.sh## 🔧 Wymagania
 
@@ -699,12 +858,13 @@ Główny pipeline wykonujący wszystkie kroki automatycznie.
 
 **Kolejność wykonania:**
 
-1. `data_exploration.py` - analiza danych
-2. `data_preprocessing.py` - przygotowanie danych
-3. `train_anfis.py` - trening ANFIS
-4. `train_comparison_models.py` - trening NN/SVM/RF
-5. `compare_all_models.py` - porównanie wyników
-6. `visualize_membership_functions.py` - wizualizacja funkcji przynależności
+1. data_preprocessing.py ← Przygotowanie danych
+2. train_anfis.py ← Trening modeli ANFIS
+3. visualize_membership_functions.py ← Wizualizacja funkcji przynależności
+4. train_comparison_models.py ← Trening modeli porównawczych (NN, SVM, RF)
+5. data_exploration.py ← Analiza eksploracyjna danych
+6. compare_all_models.py ← Porównanie wszystkich modeli
+7. app.py ← Uruchomienie GUI Streamlit
 
 ---
 

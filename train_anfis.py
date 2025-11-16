@@ -15,7 +15,18 @@ tf.random.set_seed(42)
 # POMOCNICZE
 # -------------------------------------------------------------
 def _load_dataset(dataset: str):
-    """Ładuje dane z plików .npy dla danego datasetu."""
+    """
+    Ładuje znormalizowane dane treningowe i testowe dla określonego zestawu.
+    
+    Args:
+        dataset: nazwa zestawu ('concrete', 'all', 'red', 'white')
+        
+    Returns:
+        Tuple (X_train, X_test, y_train, y_test) jako tablice numpy
+        
+    Raises:
+        ValueError: jeśli dataset nie istnieje
+    """
     base = "data"
     paths = {
         "concrete": (f"{base}/concrete-strength/X_train.npy", f"{base}/concrete-strength/X_test.npy",
@@ -35,6 +46,18 @@ def _load_dataset(dataset: str):
 
 
 def _rules_count(n_features: int, n_memb: int) -> int:
+    """
+    Oblicza całkowitą liczbę reguł rozmytych w modelu ANFIS.
+    
+    Liczba reguł = n_memb^n_features (wszystkie kombinacje funkcji przynależności)
+    
+    Args:
+        n_features: liczba cech wejściowych
+        n_memb: liczba funkcji przynależności na każdą cechę
+        
+    Returns:
+        Całkowita liczba reguł
+    """
     return int(n_memb ** n_features)
 
 
@@ -42,6 +65,27 @@ def _rules_count(n_features: int, n_memb: int) -> int:
 # GŁÓWNY TRENING
 # -------------------------------------------------------------
 def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
+    """
+    Trenuje pojedynczy model ANFIS dla określonego zestawu danych.
+    
+    Proces treningu:
+    1. Ładuje i przygotowuje dane
+    2. Tworzy model ANFIS z odpowiednią aktywacją (linear dla regresji, sigmoid dla klasyfikacji)
+    3. Kompiluje z odpowiednią funkcją straty i metryką
+    4. Trenuje z ModelCheckpoint i EarlyStopping
+    5. Generuje wykresy treningu i dopasowania
+    6. Ekstrahuje i zapisuje reguły
+    7. Zapisuje wyniki do JSON
+    
+    Args:
+        n_memb: liczba funkcji przynależności (2 lub 3)
+        epochs: maksymalna liczba epok treningu
+        batch_size: rozmiar batcha
+        dataset: nazwa zestawu ('concrete', 'all', 'red', 'white')
+        
+    Returns:
+        Tuple (test_metric, model) - metryka testowa i wytrenowany model
+    """
     print(f"\n{'='*70}")
     print(f"TRENING ANFIS: dataset={dataset}, n_memb={n_memb}")
     print(f"{'='*70}\n")
@@ -59,7 +103,9 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
     print(f"Features: {n_features}, MF: {n_memb}, Rules: {n_rules}")
     print(f"Train: {len(X_train)}, Test: {len(X_test)}")
 
-    anfis_model = ANFISModel(n_input=n_features, n_memb=n_memb, batch_size=batch_size)
+    # Dla regresji (concrete) ustaw regression=True
+    is_regression = (dataset == "concrete")
+    anfis_model = ANFISModel(n_input=n_features, n_memb=n_memb, batch_size=batch_size, regression=is_regression)
 
     # --------------------- konfiguracja metryk ---------------------
     if dataset == "concrete":
@@ -151,14 +197,19 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
 # -------------------------------------------------------------
 def plot_training_history(history, n_memb, dataset):
     """
-    Training history visualization.
+    Wizualizuje historię treningu modelu ANFIS.
     
-    For CLASSIFICATION (wine):
-      - Top row: Accuracy + Loss curves (train vs validation)
-      - Bottom row: Per-epoch metrics table preview
+    Dla KLASYFIKACJI (wine):
+    - Górny rząd: Accuracy i Loss (train vs validation)
+    - Dolny rząd: Tabela z podglądem metryk na epokę
     
-    For REGRESSION (concrete):
-      - MAE + Loss curves (train vs validation)
+    Dla REGRESJI (concrete):
+    - MAE i Loss (train vs validation)
+    
+    Args:
+        history: obiekt History z Keras
+        n_memb: liczba funkcji przynależności
+        dataset: nazwa zestawu danych
     """
     fig = plt.figure(figsize=(16, 6))
     gs = fig.add_gridspec(2, 2, height_ratios=[3, 1])
@@ -247,99 +298,78 @@ def plot_training_history(history, n_memb, dataset):
 
 def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
     """
-    Visualization of model fit on training data.
+    Wizualizuje dopasowanie modelu na zbiorze treningowym.
     
-    For REGRESSION (concrete):
-      - Left: Predicted vs Actual scatter plot with ideal fit line (y=x)
-      - Right: Residual distribution histogram
+    Generuje prosty wykres rozproszenia (scatter plot) pokazujący
+    wartości rzeczywiste vs predykcje modelu.
     
-    For CLASSIFICATION (wine):
-      - Left: Confusion matrix heatmap
-      - Right: Prediction probability distribution by class
+    Dla regresji (concrete) dodatkowo oblicza i wyświetla współczynnik R².
+    Linia y=x reprezentuje idealne dopasowanie.
+    
+    Args:
+        model: wytrenowany model ANFIS
+        X_train: cechy treningowe
+        y_train: etykiety treningowe
+        n_memb: liczba funkcji przynależności
+        dataset: nazwa zestawu danych
     """
-    preds = model(X_train).reshape(-1)
-    fig, ax = plt.subplots(1, 2, figsize=(14, 5))
-
+    print(f"\n[DEBUG] plot_fit_on_train START - dataset={dataset}, n_memb={n_memb}")
+    print(f"[DEBUG] y_train shape: {y_train.shape}, min: {y_train.min():.2f}, max: {y_train.max():.2f}")
+    
+    # Predykcje
+    preds_raw = model(X_train)
+    if hasattr(preds_raw, 'numpy'):
+        preds = preds_raw.numpy().reshape(-1)
+    else:
+        preds = np.array(preds_raw).reshape(-1)
+    
+    print(f"[DEBUG] preds min: {preds.min():.4f}, max: {preds.max():.4f}, mean: {preds.mean():.4f}")
+    
+    # PROSTY WYKRES
+    fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+    
+    # SCATTER
+    ax.scatter(y_train, preds, s=30, alpha=0.6, color='blue')
+    
+    # Linia y=x
+    min_val = min(y_train.min(), preds.min())
+    max_val = max(y_train.max(), preds.max())
+    ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='y=x')
+    
+    ax.set_xlabel("Rzeczywiste", fontsize=14)
+    ax.set_ylabel("Predykcja", fontsize=14)
+    ax.set_title(f"{dataset} - {n_memb}MF", fontsize=16)
+    ax.legend()
+    ax.grid(True)
+    
+    # R2 dla regresji
     if dataset == "concrete":
-        # REGRESSION: Scatter plot with ideal fit line
-        ax[0].scatter(y_train, preds, s=15, alpha=0.5, color='steelblue', edgecolors='navy', linewidth=0.5)
-        
-        # Perfect prediction line (y = x)
-        min_val, max_val = y_train.min(), y_train.max()
-        ax[0].plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Fit (y=x)')
-        
-        ax[0].set_xlabel("True Compressive Strength (MPa)", fontsize=11, fontweight='bold')
-        ax[0].set_ylabel("ANFIS Prediction (MPa)", fontsize=11, fontweight='bold')
-        ax[0].set_title(f"Regression Fit: Predicted vs Actual\n({dataset}, {n_memb} MF)", fontsize=12, fontweight='bold')
-        ax[0].legend(fontsize=10)
-        ax[0].grid(True, alpha=0.3)
-        
-        # Add R² text
         from sklearn.metrics import r2_score
         r2 = r2_score(y_train, preds)
-        ax[0].text(0.05, 0.95, f'R² = {r2:.4f}', transform=ax[0].transAxes, 
-                   fontsize=11, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-        
-        # Residuals histogram
-        residuals = y_train - preds
-        ax[1].hist(residuals, bins=40, color='coral', alpha=0.7, edgecolor='darkred')
-        ax[1].axvline(x=0, color='red', linestyle='--', linewidth=2, label='Zero Error')
-        ax[1].set_xlabel("Residuals (True - Predicted)", fontsize=11, fontweight='bold')
-        ax[1].set_ylabel("Frequency", fontsize=11, fontweight='bold')
-        ax[1].set_title(f"Residual Distribution\nMean={residuals.mean():.2f}, Std={residuals.std():.2f}", 
-                        fontsize=12, fontweight='bold')
-        ax[1].legend(fontsize=10)
-        ax[1].grid(True, alpha=0.3, axis='y')
-    else:
-        # CLASSIFICATION: Confusion Matrix + Probability Distribution
-        from sklearn.metrics import confusion_matrix
-        
-        # Binarize predictions (threshold = 0.5)
-        y_pred_class = (preds > 0.5).astype(int)
-        cm = confusion_matrix(y_train, y_pred_class)
-        
-        # Confusion Matrix Heatmap
-        im = ax[0].imshow(cm, interpolation='nearest', cmap='Blues')
-        ax[0].figure.colorbar(im, ax=ax[0])
-        ax[0].set_xticks([0, 1])
-        ax[0].set_yticks([0, 1])
-        ax[0].set_xticklabels(['Low (0)', 'High (1)'], fontsize=10)
-        ax[0].set_yticklabels(['Low (0)', 'High (1)'], fontsize=10)
-        ax[0].set_xlabel('Predicted Class', fontsize=11, fontweight='bold')
-        ax[0].set_ylabel('True Class', fontsize=11, fontweight='bold')
-        ax[0].set_title(f'Confusion Matrix (Train)\n({dataset}, {n_memb} MF)', fontsize=12, fontweight='bold')
-        
-        # Add text annotations
-        for i in range(2):
-            for j in range(2):
-                text = ax[0].text(j, i, f'{cm[i, j]}', ha="center", va="center", 
-                                 color="white" if cm[i, j] > cm.max() / 2 else "black", fontsize=14, fontweight='bold')
-        
-        # Prediction probability distribution by true class
-        ax[1].hist(preds[y_train == 0], bins=30, alpha=0.7, label='True Class 0 (Low)', color='salmon', edgecolor='darkred')
-        ax[1].hist(preds[y_train == 1], bins=30, alpha=0.7, label='True Class 1 (High)', color='lightgreen', edgecolor='darkgreen')
-        ax[1].axvline(x=0.5, color='black', linestyle='--', linewidth=2, label='Decision Threshold (0.5)')
-        ax[1].set_xlabel("Predicted Probability", fontsize=11, fontweight='bold')
-        ax[1].set_ylabel("Frequency", fontsize=11, fontweight='bold')
-        ax[1].set_title(f"Prediction Distribution by True Class\n(Bins=30)", fontsize=12, fontweight='bold')
-        ax[1].legend(fontsize=9)
-        ax[1].grid(True, alpha=0.3, axis='y')
-
+        ax.text(0.05, 0.95, f'R²={r2:.3f}', transform=ax.transAxes, fontsize=12,
+                bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7))
+    
     plt.tight_layout()
     plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_fit_train.png", dpi=300, bbox_inches="tight")
     plt.close()
-
-    for a in ax:
-        a.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_fit_train.png", dpi=300, bbox_inches="tight")
-    plt.close()
+    print(f"✓ Zapisano results/anfis_{dataset}_{n_memb}memb_fit_train.png")
 
 
 # -------------------------------------------------------------
 # EKSTRAKCJA REGUŁ
 # -------------------------------------------------------------
 def _rule_index_to_tuple(idx: int, n_features: int, n_memb: int):
+    """
+    Konwertuje płaski indeks reguły na wektor indeksów funkcji przynależności.
+    
+    Args:
+        idx: indeks reguły (0 do n_memb^n_features - 1)
+        n_features: liczba cech
+        n_memb: liczba funkcji przynależności na cechę
+        
+    Returns:
+        Lista indeksów MF dla każdej cechy
+    """
     combo = []
     for _ in range(n_features):
         combo.append(idx % n_memb)
@@ -348,6 +378,24 @@ def _rule_index_to_tuple(idx: int, n_features: int, n_memb: int):
 
 
 def extract_and_save_rules(model, n_memb: int, dataset: str, X_train):
+    """
+    Ekstrahuje reguły rozmyte z wytrenowanego modelu ANFIS i zapisuje do JSON.
+    
+    Jeśli liczba reguł > 4096, wybiera 100 najczęściej aktywowanych reguł
+    na podstawie analizy danych treningowych.
+    
+    Zapisywane informacje:
+    - Indeksy funkcji przynależności dla każdej reguły
+    - Parametry konsekwentów (wagi i bias)
+    - Centra i sigmy funkcji przynależności
+    - Częstość aktywacji (dla dużych modeli)
+    
+    Args:
+        model: wytrenowany model ANFIS
+        n_memb: liczba funkcji przynależności
+        dataset: nazwa zestawu danych
+        X_train: dane treningowe (do analizy aktywacji)
+    """
     model.update_weights()
     centers, sigmas = model.get_membership_functions()
     bias, weights = model.bias, model.weights
@@ -408,6 +456,26 @@ def extract_and_save_rules(model, n_memb: int, dataset: str, X_train):
 # CROSS-WALIDACJA
 # -------------------------------------------------------------
 def cross_validate_anfis(n_memb=2, batch_size=32, dataset="all", n_splits=5, epochs=10):
+    """
+    Przeprowadza k-krotną walidację krzyżową modelu ANFIS.
+    
+    Używa:
+    - KFold dla regresji (concrete)
+    - StratifiedKFold dla klasyfikacji (wine)
+    
+    Każdy fold jest trenowany niezależnie, a wyniki są uśredniane.
+    Zapisuje szczegółowe wyniki każdego folda oraz średnie do JSON.
+    
+    Args:
+        n_memb: liczba funkcji przynależności
+        batch_size: rozmiar batcha
+        dataset: nazwa zestawu danych
+        n_splits: liczba foldów (domyślnie 5)
+        epochs: liczba epok treningu per fold
+        
+    Returns:
+        Dict z wynikami cross-validation
+    """
     print(f"\n{'='*70}")
     print(f"CROSS-VALIDATION: {dataset}, {n_memb} MF, {n_splits}-fold")
     print(f"{'='*70}\n")
@@ -420,10 +488,11 @@ def cross_validate_anfis(n_memb=2, batch_size=32, dataset="all", n_splits=5, epo
         if dataset == "concrete" else StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
 
     fold_metrics = []
+    is_regression = (dataset == "concrete")
     for fold, (tr_idx, va_idx) in enumerate(splitter.split(X, y if dataset != "concrete" else None), 1):
         print(f"Fold {fold}/{n_splits}")
         Xt, Xv, yt, yv = X[tr_idx], X[va_idx], y[tr_idx], y[va_idx]
-        model = ANFISModel(n_input=X.shape[1], n_memb=n_memb, batch_size=batch_size)
+        model = ANFISModel(n_input=X.shape[1], n_memb=n_memb, batch_size=batch_size, regression=is_regression)
         if dataset == "concrete":
             model.model.compile(optimizer=tf.keras.optimizers.Nadam(0.001),
                                 loss="mean_squared_error", metrics=["mae"])

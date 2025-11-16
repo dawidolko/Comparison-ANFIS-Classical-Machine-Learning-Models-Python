@@ -46,15 +46,43 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Pomocnicze
 # ------------------------------------------------------
 def now_suffix():
+    """
+    Generuje znacznik czasowy w formacie YYYYMMDD-HHMMSS.
+    
+    Returns:
+        String z aktualną datą i czasem
+    """
     return time.strftime("%Y%m%d-%H%M%S")
 
 def ensure_column_vector(y, for_classification=False):
+    """
+    Konwertuje etykiety do odpowiedniego kształtu dla klasyfikacji lub regresji.
+    
+    Args:
+        y: wektor etykiet
+        for_classification: True = zwraca (n, 1), False = zwraca (n,)
+        
+    Returns:
+        Przekształcona tablica numpy
+    """
     y = np.asarray(y)
     if for_classification:
         return y.reshape(-1, 1) if y.ndim == 1 else y
     return y.ravel()  # Regresja: wektor 1D
 
 def class_weight_from_labels(y):
+    """
+    Oblicza wagi klas dla niezbalansowanych zestawów danych.
+    
+    Używane do class_weight w modelach klasyfikacyjnych.
+    Zwiększa wagę klasy mniejszościowej.
+    
+    Args:
+        y: etykiety binarne (0/1)
+        
+    Returns:
+        Dict {0: waga_0, 1: waga_1} lub None jeśli brak próbek
+    """
     y = np.asarray(y).ravel()
     pos = np.sum(y == 1)
     neg = np.sum(y == 0)
@@ -64,7 +92,12 @@ def class_weight_from_labels(y):
     return {0: 1.0, 1: float(w_pos)}
 
 def load_wine_data():
-    """Ładuje dane Wine Quality."""
+    """
+    Ładuje znormalizowane dane Wine Quality z plików .npy.
+    
+    Returns:
+        Tuple (X_train, y_train, X_test, y_test)
+    """
     base = os.path.join("data", "wine-quality") if os.path.exists("data/wine-quality/X_train.npy") else "data"
     X_train = np.load(os.path.join(base, "X_train.npy"))
     y_train = np.load(os.path.join(base, "y_train.npy"))
@@ -75,7 +108,12 @@ def load_wine_data():
     return X_train, y_train, X_test, y_test
 
 def load_concrete_data():
-    """Ładuje dane Concrete Strength z katalogu data/concrete-strength/."""
+    """
+    Ładuje znormalizowane dane Concrete Strength z plików .npy.
+    
+    Returns:
+        Tuple (X_train, y_train, X_test, y_test)
+    """
     base_dir = "data/concrete-strength"
     X_train = np.load(os.path.join(base_dir, "X_train.npy"))
     y_train = np.load(os.path.join(base_dir, "y_train.npy"))

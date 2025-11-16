@@ -14,7 +14,15 @@ st.set_page_config(page_title="ANFIS Comparison", page_icon="🤖", layout="wide
 # Funkcje pomocnicze
 # -------------------------------------------------------------
 def load_json_safe(path: str):
-    """Bezpieczne ładowanie pliku JSON, zwraca None w razie braku."""
+    """
+    Bezpiecznie wczytuje plik JSON.
+    
+    Args:
+        path: ścieżka do pliku JSON
+        
+    Returns:
+        Dict z danymi lub None w przypadku błędu lub braku pliku
+    """
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -25,7 +33,16 @@ def load_json_safe(path: str):
 
 
 def display_image_if_exists(path: str, caption: str = None):
-    """Wyświetla obrazek, jeśli istnieje."""
+    """
+    Wyświetla obrazek w Streamlit jeśli plik istnieje.
+    
+    Args:
+        path: ścieżka do pliku graficznego
+        caption: opcjonalny podpis pod obrazkiem
+        
+    Returns:
+        True jeśli obrazek został wyświetlony, False w przeciwnym razie
+    """
     if os.path.exists(path):
         st.image(Image.open(path), use_column_width=True, caption=caption)
         return True
@@ -36,6 +53,15 @@ def display_image_if_exists(path: str, caption: str = None):
 # Strona główna
 # -------------------------------------------------------------
 def show_home():
+    """
+    Wyświetla stronę główną aplikacji Streamlit.
+    
+    Zawiera:
+    - Opis projektów (Wine Quality, Concrete Strength)
+    - Architekturę modelu ANFIS
+    - Informacje o preprocessingu
+    - Porównywane modele
+    """
     st.title("🤖 ANFIS - Adaptive Neuro-Fuzzy Inference System")
     st.markdown("### Porównanie ANFIS z klasycznymi metodami ML")
 

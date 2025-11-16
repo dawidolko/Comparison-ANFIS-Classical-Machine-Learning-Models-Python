@@ -8,6 +8,23 @@ import json
 
 
 def load_and_preprocess_data():
+    """
+    Ładuje i przetwarza dane Wine Quality (czerwone + białe wino).
+    
+    Tworzy trzy zestawy danych:
+    - 'all': połączone czerwone i białe wino
+    - 'red': tylko czerwone wino
+    - 'white': tylko białe wino
+    
+    Dla każdego zestawu:
+    - Binaryzuje jakość (quality > 5 = 1, inaczej 0)
+    - Normalizuje cechy (StandardScaler)
+    - Dzieli na zbiór treningowy i testowy (80/20)
+    - Zapisuje jako pliki .npy i scaler jako .pkl
+    
+    Returns:
+        Dict ze statystykami każdego zestawu danych
+    """
     csv_red = 'data/wine-quality/winequality-red.csv' if os.path.exists('data/wine-quality/winequality-red.csv') else 'data/winequality-red.csv'
     csv_white = 'data/wine-quality/winequality-white.csv' if os.path.exists('data/wine-quality/winequality-white.csv') else 'data/winequality-white.csv'
     
@@ -81,6 +98,19 @@ def load_and_preprocess_data():
 
 
 def load_and_preprocess_concrete():
+    """
+    Ładuje i przetwarza dane Concrete Strength (wytrzymałość betonu).
+    
+    Proces:
+    - Wczytuje dane z CSV (8 cech + 1 cel: wytrzymałość w MPa)
+    - Normalizuje cechy (StandardScaler)
+    - Dzieli na treningowy/testowy (80/20)
+    - Zapisuje do data/concrete-strength/*.npy
+    - Zapisuje scaler do models/concrete-strength/scaler.pkl
+    
+    Returns:
+        Dict z informacjami o zestawie lub None jeśli brak pliku
+    """
     csv_path = 'data/concrete-strength/Concrete_Data.csv'
     if not os.path.exists(csv_path):
         print(f"⚠ Brak {csv_path}")

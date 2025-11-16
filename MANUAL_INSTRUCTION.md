@@ -1,16 +1,16 @@
 # 📘 Manual Installation Instructions
 
-This guide provides step-by-step instructions for setting up and running the ANFIS comparison project from scratch.
+This guide provides step-by-step instructions for setting up and running the ANFIS comparison project.
+
+**Latest Update**: November 2025 - Added Polish docstrings to all functions
 
 ---
 
 ## 📋 Table of Contents
 
 1. [System Requirements](#system-requirements)
-2. [Installation Methods](#installation-methods)
-   - [Method 1: Automated Setup (Recommended)](#method-1-automated-setup-recommended)
-   - [Method 2: Manual Installation](#method-2-manual-installation)
-3. [Verifying Installation](#verifying-installation)
+2. [Quick Start](#quick-start)
+3. [Manual Installation](#manual-installation)
 4. [Running Individual Components](#running-individual-components)
 5. [Troubleshooting](#troubleshooting)
 
@@ -21,7 +21,7 @@ This guide provides step-by-step instructions for setting up and running the ANF
 ### Minimum Requirements
 
 - **OS**: Linux, macOS, or Windows 10+
-- **Python**: 3.8 - 3.12 (⚠️ Python 3.13+ not supported due to TensorFlow compatibility)
+- **Python**: 3.8 - 3.12 (⚠️ Python 3.13+ not supported due to TensorFlow 2.17 compatibility)
 - **RAM**: 4 GB
 - **Disk Space**: 1 GB free space
 - **Internet**: Required for downloading dependencies
@@ -32,32 +32,17 @@ This guide provides step-by-step instructions for setting up and running the ANF
 - **CPU**: Multi-core processor (4+ cores)
 - **GPU**: CUDA-compatible GPU (optional, speeds up TensorFlow training)
 
-### Software Dependencies
-
-- **Python 3.8+** with pip
-- **Git** (for cloning repository)
-- **bash** (Linux/macOS) or **cmd/PowerShell** (Windows)
-
 ---
 
-## 🚀 Installation Methods
+## 🚀 Quick Start
 
-### Method 1: Automated Setup (Recommended)
-
-This is the **fastest and easiest** way to get started.
-
-#### Step 1: Clone Repository
-
-```bash
-git clone https://github.com/dawidolko/Comparison-ANFIS-Classical-Machine-Learning-Models-Python.git
-cd Comparison-ANFIS-Classical-Machine-Learning-Models-Python
-```
-
-#### Step 2: Run Setup Script
+### Automated Setup (Recommended)
 
 **Linux/macOS:**
 
 ```bash
+git clone https://github.com/dawidolko/Comparison-ANFIS-Classical-Machine-Learning-Models-Python.git
+cd Comparison-ANFIS-Classical-Machine-Learning-Models-Python
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -65,39 +50,27 @@ chmod +x setup.sh
 **Windows:**
 
 ```cmd
+git clone https://github.com/dawidolko/Comparison-ANFIS-Classical-Machine-Learning-Models-Python.git
+cd Comparison-ANFIS-Classical-Machine-Learning-Models-Python
 setup.bat
 ```
 
-#### Step 3: Wait for Completion
-
 The script will automatically:
 
-- Create virtual environment
-- Install all dependencies (TensorFlow, scikit-learn, Streamlit, etc.)
-- Preprocess datasets (Wine Quality + Concrete Strength)
-- Train ANFIS models with 2 & 3 membership functions
-- Perform 5-fold cross-validation
-- Generate membership function visualizations
-- Create data exploration plots
-- Train comparison models (Neural Network, SVM, Random Forest)
-- Generate model comparison charts
-- Launch Streamlit GUI
+1. ✅ Create virtual environment
+2. ✅ Install all dependencies
+3. ✅ Preprocess both datasets (Wine + Concrete)
+4. ✅ Train ANFIS models (2 & 3 membership functions)
+5. ✅ Perform 5-fold cross-validation
+6. ✅ Generate membership function plots
+7. ✅ Create data exploration visualizations
+8. ✅ Train comparison models (NN, SVM, RF)
+9. ✅ Generate comparison charts
+10. ✅ Launch Streamlit GUI at `http://localhost:8501`
 
-**⏱️ Estimated Time**: 15-30 minutes (varies by CPU speed)
-
-#### Step 4: Access GUI
-
-Once complete, your browser should automatically open:
-
-```
-http://localhost:8501
-```
-
-If not, manually navigate to that URL.
+**⏱️ Estimated Time**: 15-30 minutes
 
 ---
-
-### Method 2: Manual Installation
 
 For users who want more control over the installation process.
 

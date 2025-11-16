@@ -27,7 +27,19 @@ os.makedirs("results", exist_ok=True)
 # Pomocnicze funkcje
 # ---------------------------------------------------------------
 def safe_read_csv(paths, **kwargs):
-    """Próbuje wczytać CSV z listy możliwych ścieżek."""
+    """
+    Próbuje wczytać plik CSV z listy możliwych ścieżek.
+    
+    Iteruje przez listę ścieżek i zwraca DataFrame z pierwszego istniejącego pliku.
+    Jeśli żaden plik nie istnieje, zwraca None.
+    
+    Args:
+        paths: lista ścieżek do sprawdzenia
+        **kwargs: dodatkowe argumenty przekazywane do pd.read_csv()
+        
+    Returns:
+        DataFrame lub None
+    """
     for path in paths:
         if os.path.exists(path):
             try:
@@ -39,7 +51,15 @@ def safe_read_csv(paths, **kwargs):
 
 
 def save_plot(fig, filename):
-    """Bezpieczny zapis wykresu do /results."""
+    """
+    Bezpiecznie zapisuje wykres do katalogu results/.
+    
+    Automatycznie stosuje tight_layout i zamyka figurę po zapisie.
+    
+    Args:
+        fig: obiekt Figure z matplotlib
+        filename: nazwa pliku wyjściowego (np. "wykres.png")
+    """
     out_path = os.path.join("results", filename)
     plt.tight_layout()
     fig.savefig(out_path, dpi=300, bbox_inches="tight")

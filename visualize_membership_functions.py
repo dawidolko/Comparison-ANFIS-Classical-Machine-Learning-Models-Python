@@ -8,7 +8,16 @@ import argparse
 
 
 def visualize_membership_functions(n_memb=2, dataset='all'):
-    """Rysuje funkcje przynależności ANFIS dla wybranych cech."""
+    """
+    Wizualizuje gaussowskie funkcje przynależności dla kluczowych cech.
+    
+    Dla każdej ważnej cechy rysuje n_memb funkcji gaussowskich z wytrenowanego modelu.
+    Zakres osi X jest dostosowany do rzeczywistych wartości w danych treningowych.
+    
+    Args:
+        n_memb: liczba funkcji przynależności (2 lub 3)
+        dataset: nazwa zestawu ('concrete', 'all', 'red', 'white')
+    """
     print(f"\n📈 Wizualizacja MF: dataset={dataset}, n_memb={n_memb}")
 
     model_path = f"models/anfis_{dataset}_best_{n_memb}memb.weights.h5"

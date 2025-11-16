@@ -25,7 +25,16 @@ import seaborn as sns
 # FUNKCJE POMOCNICZE
 # ---------------------------------------------------------------------
 def load_wine_results():
-    """Wczytuje wyniki dla Wine Quality (dataset 'all')."""
+    """
+    Wczytuje wyniki wszystkich modeli dla Wine Quality (dataset 'all').
+    
+    Obsługuje:
+    - 2 warianty ANFIS (2 i 3 funkcje przynależności)
+    - 3 modele klasyczne (NN, SVM, Random Forest)
+    
+    Returns:
+        Dict[nazwa_modelu, wyniki_json]
+    """
     paths = {
         "ANFIS (2 MF)": "results/anfis_all_2memb_results.json",
         "ANFIS (3 MF)": "results/anfis_all_3memb_results.json",
@@ -54,7 +63,16 @@ def load_wine_results():
 
 
 def load_concrete_results():
-    """Wczytuje wyniki dla Concrete Strength."""
+    """
+    Wczytuje wyniki wszystkich modeli dla Concrete Strength.
+    
+    Obsługuje:
+    - 2 warianty ANFIS (2 i 3 funkcje przynależności)
+    - 3 modele klasyczne (NN, SVM, Random Forest)
+    
+    Returns:
+        Dict[nazwa_modelu, wyniki_json]
+    """
     paths = {
         "ANFIS (2 MF)": "results/anfis_concrete_2memb_results.json",
         "ANFIS (3 MF)": "results/anfis_concrete_3memb_results.json",
