@@ -103,7 +103,7 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
     print(f"Features: {n_features}, MF: {n_memb}, Rules: {n_rules}")
     print(f"Train: {len(X_train)}, Test: {len(X_test)}")
 
-    # Dla regresji (concrete) ustaw regression=True
+    # Dla regresji (concrete) ustawiono regression=True
     is_regression = (dataset == "concrete")
     anfis_model = ANFISModel(n_input=n_features, n_memb=n_memb, batch_size=batch_size, regression=is_regression)
 
@@ -197,24 +197,24 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
 # -------------------------------------------------------------
 def plot_training_history(history, n_memb, dataset):
     """
-    Wizualizuje historię treningu modelu ANFIS.
+    Wygenerowano wizualizację historii treningu modelu ANFIS.
     
     Dla KLASYFIKACJI (wine):
-    - Górny rząd: Accuracy i Loss (train vs validation)
-    - Dolny rząd: Tabela z podglądem metryk na epokę
+    - Górny wiersz: krzywe Accuracy i Loss (zbiór treningowy vs walidacyjny),
+    - Dolny wiersz: tabela podsumowująca metryki w wybranych epokach.
     
     Dla REGRESJI (concrete):
-    - MAE i Loss (train vs validation)
+    - Krzywe MAE i Loss (zbiór treningowy vs walidacyjny).
     
     Args:
         history: obiekt History z Keras
         n_memb: liczba funkcji przynależności
-        dataset: nazwa zestawu danych
+        dataset: nazwa zbioru danych
     """
     fig = plt.figure(figsize=(16, 6))
     gs = fig.add_gridspec(2, 2, height_ratios=[3, 1])
 
-    # Determine metric type
+    # Określono typ metryki na podstawie zawartości historii
     if "accuracy" in history.history:
         mkey, vkey, label = "accuracy", "val_accuracy", "Accuracy"
         is_classification = True
@@ -225,7 +225,7 @@ def plot_training_history(history, n_memb, dataset):
         mkey = None
         is_classification = False
 
-    # Top-left: Primary metric (Accuracy/MAE)
+    # Lewy górny wykres: podstawowa metryka (Accuracy/MAE)
     ax0 = fig.add_subplot(gs[0, 0])
     if mkey:
         epochs = np.arange(1, len(history.history[mkey]) + 1)
@@ -237,32 +237,32 @@ def plot_training_history(history, n_memb, dataset):
         ax0.legend(fontsize=10, loc='best')
         ax0.grid(True, alpha=0.3)
         
-        # Highlight best epoch
+        # Zaznaczono najlepszą epokę (maksymalna wartość walidacyjna dla klasyfikacji, minimalna dla regresji)
         best_epoch = np.argmax(history.history[vkey]) if is_classification else np.argmin(history.history[vkey])
         best_value = history.history[vkey][best_epoch]
-        ax0.scatter([best_epoch + 1], [best_value], color='red', s=100, zorder=5, label=f'Best Epoch: {best_epoch + 1}')
+        ax0.scatter([best_epoch + 1], [best_value], color='red', s=100, zorder=5, label=f'Najlepsza epoka: {best_epoch + 1}')
         ax0.legend(fontsize=10, loc='best')
 
-    # Top-right: Loss curve
+    # Prawy górny wykres: krzywa funkcji straty (Loss)
     ax1 = fig.add_subplot(gs[0, 1])
     epochs = np.arange(1, len(history.history["loss"]) + 1)
     ax1.plot(epochs, history.history["loss"], label="Train", lw=2.5, marker='o', markersize=4, color='darkgreen')
     ax1.plot(epochs, history.history["val_loss"], label="Validation", lw=2.5, marker='s', markersize=4, color='darkred')
-    ax1.set_title(f"Loss Curve ({dataset}, {n_memb} MF)", fontsize=13, fontweight='bold')
+    ax1.set_title(f"Krzywa funkcji straty ({dataset}, {n_memb} MF)", fontsize=13, fontweight='bold')
     ax1.set_xlabel("Epoch", fontsize=11, fontweight='bold')
     ax1.set_ylabel("Loss (MSE/BCE)", fontsize=11, fontweight='bold')
     ax1.legend(fontsize=10, loc='best')
     ax1.grid(True, alpha=0.3)
     
-    # Bottom: Metrics table (sample of epochs)
+    # Dolny wiersz: tabela metryk (próbka epok)
     ax2 = fig.add_subplot(gs[1, :])
     ax2.axis('off')
     
-    # Create table data (show every 5th epoch + last epoch)
+    # Przyjęto próbę epok: co 5. epoka + ostatnia, maks. 8 wierszy
     total_epochs = len(history.history["loss"])
     sample_epochs = list(range(0, total_epochs, 5)) + [total_epochs - 1]
-    sample_epochs = sorted(set(sample_epochs))[:8]  # Max 8 epochs
-    
+    sample_epochs = sorted(set(sample_epochs))[:8]
+
     if mkey:
         table_data = [
             ["Epoch"] + [str(e + 1) for e in sample_epochs],
@@ -278,18 +278,19 @@ def plot_training_history(history, n_memb, dataset):
             ["Val Loss"] + [f"{history.history['val_loss'][e]:.4f}" for e in sample_epochs]
         ]
     
+    # Dodano tabelę do osi
     table = ax2.table(cellText=table_data, cellLoc='center', loc='center', 
                      colWidths=[0.12] * len(table_data[0]))
     table.auto_set_font_size(False)
     table.set_fontsize(9)
     table.scale(1, 2)
     
-    # Color header row
+    # Kolor nagłówka został ustawiony na zielony
     for i in range(len(table_data[0])):
         table[(0, i)].set_facecolor('#4CAF50')
         table[(0, i)].set_text_props(weight='bold', color='white')
 
-    plt.suptitle(f"Training History: {dataset.upper()} ({n_memb} Membership Functions)", 
+    plt.suptitle(f"Historia treningu: {dataset.upper()} ({n_memb} funkcji przynależności)", 
                  fontsize=14, fontweight='bold', y=0.98)
     plt.tight_layout()
     plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_training.png", dpi=300, bbox_inches="tight")

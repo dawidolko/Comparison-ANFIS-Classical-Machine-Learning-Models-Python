@@ -40,7 +40,7 @@ def load_anfis_model(weights_path: str) -> Optional[ANFISModel]:
         n_memb = None
 
         with h5py.File(weights_path, "r") as f:
-            # próbuj znaleźć parametry fuzzy_layer
+            # próba znalezienia parametru fuzzy_layer
             for key in f.keys():
                 if "fuzzy_layer" in key:
                     grp = f[key]
@@ -115,7 +115,7 @@ def load_results() -> Dict[str, Any]:
         "Random Forest": "rf_results.json"
     }
 
-    # sprawdź wszystkie wpisy
+    # sprawdzenie wszystkich wpisów
     for name, filename in manual_map.items():
         path = os.path.join(base_dir, filename)
         if os.path.exists(path):
@@ -125,7 +125,7 @@ def load_results() -> Dict[str, Any]:
             except Exception as e:
                 print(f"⚠️ Błąd przy wczytywaniu {filename}: {e}")
 
-    # dodatkowo — autodiscover wszystkich wyników anfis_*.json
+    # autodiscover wszystkich wyników anfis_*.json
     for fn in os.listdir(base_dir):
         if fn.startswith("anfis_") and fn.endswith(".json"):
             full = os.path.join(base_dir, fn)

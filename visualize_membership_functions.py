@@ -34,7 +34,6 @@ def visualize_membership_functions(n_memb=2, dataset='all'):
         ]
         important_features = list(range(min(6, X_train.shape[1])))
     else:
-        # wine datasets
         try:
             if dataset == "all":
                 X_train = np.load("data/X_train.npy")
