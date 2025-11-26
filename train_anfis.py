@@ -1,11 +1,13 @@
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.metrics import r2_score, confusion_matrix, classification_report
 from anfis import ANFISModel
 import matplotlib.pyplot as plt
 import json
 import os
 import argparse
+import seaborn as sns
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -197,24 +199,17 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
 # -------------------------------------------------------------
 def plot_training_history(history, n_memb, dataset):
     """
-    Wygenerowano wizualizację historii treningu modelu ANFIS.
+    Wygeneruj wizualizację historii treningu modelu ANFIS — bez tabelki.
     
-    Dla KLASYFIKACJI (wine):
-    - Górny wiersz: krzywe Accuracy i Loss (zbiór treningowy vs walidacyjny),
-    - Dolny wiersz: tabela podsumowująca metryki w wybranych epokach.
-    
-    Dla REGRESJI (concrete):
-    - Krzywe MAE i Loss (zbiór treningowy vs walidacyjny).
+    Dla KLASYFIKACJI (wine): krzywe Accuracy i Loss.
+    Dla REGRESJI (concrete): krzywe MAE i Loss.
     
     Args:
-        history: obiekt History z Keras
+        history: obiekt History z Keras (lub podobny słownik z metrykami)
         n_memb: liczba funkcji przynależności
         dataset: nazwa zbioru danych
     """
-    fig = plt.figure(figsize=(16, 6))
-    gs = fig.add_gridspec(2, 2, height_ratios=[3, 1])
-
-    # Określono typ metryki na podstawie zawartości historii
+    # Ustal typ zadania i klucze metryk
     if "accuracy" in history.history:
         mkey, vkey, label = "accuracy", "val_accuracy", "Accuracy"
         is_classification = True
@@ -222,13 +217,20 @@ def plot_training_history(history, n_memb, dataset):
         mkey, vkey, label = "mae", "val_mae", "MAE"
         is_classification = False
     else:
+        # Jeśli nie ma ani accuracy, ani mae — użycie loss jako metryki
         mkey = None
         is_classification = False
 
-    # Lewy górny wykres: podstawowa metryka (Accuracy/MAE)
-    ax0 = fig.add_subplot(gs[0, 0])
+    # Tworzenie wykresów — 1 wiersz, 2 kolumny
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle(f"Historia treningu: {dataset.upper()} ({n_memb} funkcji przynależności)", 
+                 fontsize=14, fontweight='bold', y=0.98)
+
+    # --- LEWY WYKRES: METRYKA (Accuracy / MAE) ---
     if mkey:
         epochs = np.arange(1, len(history.history[mkey]) + 1)
+        
+        # Train i Validation
         ax0.plot(epochs, history.history[mkey], label="Train", lw=2.5, marker='o', markersize=4, color='steelblue')
         ax0.plot(epochs, history.history[vkey], label="Validation", lw=2.5, marker='s', markersize=4, color='coral')
         ax0.set_title(f"{label} Curve ({dataset}, {n_memb} MF)", fontsize=13, fontweight='bold')
@@ -237,14 +239,25 @@ def plot_training_history(history, n_memb, dataset):
         ax0.legend(fontsize=10, loc='best')
         ax0.grid(True, alpha=0.3)
         
-        # Zaznaczono najlepszą epokę (maksymalna wartość walidacyjna dla klasyfikacji, minimalna dla regresji)
-        best_epoch = np.argmax(history.history[vkey]) if is_classification else np.argmin(history.history[vkey])
-        best_value = history.history[vkey][best_epoch]
-        ax0.scatter([best_epoch + 1], [best_value], color='red', s=100, zorder=5, label=f'Najlepsza epoka: {best_epoch + 1}')
+        # Zaznaczenie najlepszej epoki
+        best_epoch_idx = np.argmax(history.history[vkey]) if is_classification else np.argmin(history.history[vkey])
+        best_value = history.history[vkey][best_epoch_idx]
+        best_epoch_num = best_epoch_idx + 1
+        
+        ax0.scatter([best_epoch_num], [best_value], color='red', s=100, zorder=5, 
+                    label=f'Best Epoch: {best_epoch_num}')
         ax0.legend(fontsize=10, loc='best')
 
-    # Prawy górny wykres: krzywa funkcji straty (Loss)
-    ax1 = fig.add_subplot(gs[0, 1])
+    else:
+        # Jeśli nie ma metryki (np. tylko loss), pusty wykres lub informacja
+        ax0.text(0.5, 0.5, 'Brak metryki (accuracy/mae)', ha='center', va='center', 
+                 transform=ax0.transAxes, fontsize=12, color='gray')
+        ax0.set_title(f"{dataset} - {n_memb}MF", fontsize=13, fontweight='bold')
+        ax0.set_xlabel("Epoch")
+        ax0.set_ylabel("Metric")
+        ax0.grid(True, alpha=0.3)
+
+    # --- PRAWY WYKRES: LOSS ---
     epochs = np.arange(1, len(history.history["loss"]) + 1)
     ax1.plot(epochs, history.history["loss"], label="Train", lw=2.5, marker='o', markersize=4, color='darkgreen')
     ax1.plot(epochs, history.history["val_loss"], label="Validation", lw=2.5, marker='s', markersize=4, color='darkred')
@@ -253,59 +266,28 @@ def plot_training_history(history, n_memb, dataset):
     ax1.set_ylabel("Loss (MSE/BCE)", fontsize=11, fontweight='bold')
     ax1.legend(fontsize=10, loc='best')
     ax1.grid(True, alpha=0.3)
-    
-    # Dolny wiersz: tabela metryk (próbka epok)
-    ax2 = fig.add_subplot(gs[1, :])
-    ax2.axis('off')
-    
-    # Przyjęto próbę epok: co 5. epoka + ostatnia, maks. 8 wierszy
-    total_epochs = len(history.history["loss"])
-    sample_epochs = list(range(0, total_epochs, 5)) + [total_epochs - 1]
-    sample_epochs = sorted(set(sample_epochs))[:8]
 
-    if mkey:
-        table_data = [
-            ["Epoch"] + [str(e + 1) for e in sample_epochs],
-            ["Train " + label] + [f"{history.history[mkey][e]:.4f}" for e in sample_epochs],
-            ["Val " + label] + [f"{history.history[vkey][e]:.4f}" for e in sample_epochs],
-            ["Train Loss"] + [f"{history.history['loss'][e]:.4f}" for e in sample_epochs],
-            ["Val Loss"] + [f"{history.history['val_loss'][e]:.4f}" for e in sample_epochs]
-        ]
-    else:
-        table_data = [
-            ["Epoch"] + [str(e + 1) for e in sample_epochs],
-            ["Train Loss"] + [f"{history.history['loss'][e]:.4f}" for e in sample_epochs],
-            ["Val Loss"] + [f"{history.history['val_loss'][e]:.4f}" for e in sample_epochs]
-        ]
+    # Zaznaczenie najlepszej epoki dla loss
+    best_loss_epoch_idx = np.argmin(history.history["val_loss"])
+    best_loss_value = history.history["val_loss"][best_loss_epoch_idx]
+    best_loss_epoch_num = best_loss_epoch_idx + 1
     
-    # Dodano tabelę do osi
-    table = ax2.table(cellText=table_data, cellLoc='center', loc='center', 
-                     colWidths=[0.12] * len(table_data[0]))
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    table.scale(1, 2)
-    
-    # Kolor nagłówka został ustawiony na zielony
-    for i in range(len(table_data[0])):
-        table[(0, i)].set_facecolor('#4CAF50')
-        table[(0, i)].set_text_props(weight='bold', color='white')
+    ax1.scatter([best_loss_epoch_num], [best_loss_value], color='red', s=100, zorder=5,
+                label=f'Best Loss Epoch: {best_loss_epoch_num}')
+    ax1.legend(fontsize=10, loc='best')
 
-    plt.suptitle(f"Historia treningu: {dataset.upper()} ({n_memb} funkcji przynależności)", 
-                 fontsize=14, fontweight='bold', y=0.98)
     plt.tight_layout()
     plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_training.png", dpi=300, bbox_inches="tight")
     plt.close()
+    print(f"✓ Zapisano results/anfis_{dataset}_{n_memb}memb_training.png")
 
 
 def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
     """
     Wizualizuje dopasowanie modelu na zbiorze treningowym.
     
-    Generuje prosty wykres rozproszenia (scatter plot) pokazujący
-    wartości rzeczywiste vs predykcje modelu.
-    
-    Dla regresji (concrete) dodatkowo oblicza i wyświetla współczynnik R².
-    Linia y=x reprezentuje idealne dopasowanie.
+    Dla regresji: scatter plot + histogram reszt + R²
+    Dla klasyfikacji: macierz pomyłek + raport klasyfikacyjny
     
     Args:
         model: wytrenowany model ANFIS
@@ -316,44 +298,109 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
     """
     print(f"\n[DEBUG] plot_fit_on_train START - dataset={dataset}, n_memb={n_memb}")
     print(f"[DEBUG] y_train shape: {y_train.shape}, min: {y_train.min():.2f}, max: {y_train.max():.2f}")
-    
+
     # Predykcje
     preds_raw = model(X_train)
     if hasattr(preds_raw, 'numpy'):
         preds = preds_raw.numpy().reshape(-1)
     else:
         preds = np.array(preds_raw).reshape(-1)
-    
+
     print(f"[DEBUG] preds min: {preds.min():.4f}, max: {preds.max():.4f}, mean: {preds.mean():.4f}")
-    
-    # PROSTY WYKRES
-    fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-    
-    # SCATTER
-    ax.scatter(y_train, preds, s=30, alpha=0.6, color='blue')
-    
-    # Linia y=x
-    min_val = min(y_train.min(), preds.min())
-    max_val = max(y_train.max(), preds.max())
-    ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='y=x')
-    
-    ax.set_xlabel("Rzeczywiste", fontsize=14)
-    ax.set_ylabel("Predykcja", fontsize=14)
-    ax.set_title(f"{dataset} - {n_memb}MF", fontsize=16)
-    ax.legend()
-    ax.grid(True)
-    
-    # R2 dla regresji
-    if dataset == "concrete":
-        from sklearn.metrics import r2_score
+
+    # --- KLASYFIKACJA ---
+    if dataset in ["all", "red", "white"]:  # Wine Quality → klasyfikacja
+        print("[INFO] Klasyfikacja - generuję macierz pomyłek")
+        if len(np.unique(y_train)) <= 2:  # binarna
+            preds_class = (preds > 0.5).astype(int)
+        else:
+            preds_class = np.round(preds).astype(int)
+            unique_y = np.unique(y_train)
+            unique_p = np.unique(preds_class)
+            if not set(unique_p).issubset(set(unique_y)):
+                print(f"[WARNING] Predykcje zawierają klasy poza zakresem: {unique_p} vs {unique_y}")
+                preds_class = np.clip(preds_class, unique_y.min(), unique_y.max())
+
+        # Macierz pomyłek
+        cm = confusion_matrix(y_train, preds_class)
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+                    xticklabels=np.unique(y_train), yticklabels=np.unique(y_train))
+        ax.set_xlabel("Przewidziana klasa")
+        ax.set_ylabel("Prawdziwa klasa")
+        ax.set_title(f"{dataset} - {n_memb}MF | Macierz pomyłek")
+        plt.tight_layout()
+        plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_confmat_train.png", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        # Raport klasyfikacyjny
+        report = classification_report(y_train, preds_class, output_dict=True)
+        print("\n[CLASSIFICATION REPORT]")
+        print(classification_report(y_train, preds_class))
+
+        # Zapisanie raport do pliku
+        with open(f"results/anfis_{dataset}_{n_memb}memb_class_report_train.txt", "w") as f:
+            f.write(classification_report(y_train, preds_class))
+
+        print(f"✓ Zapisano macierz pomyłek i raport")
+
+    # --- REGRESJA ---
+    else:
+        print("[INFO] Regresja - generuję wykresy diagnostyczne")
+        
+        # Obliczenie reszty
+        residuals = y_train - preds
+        
+        # R²
         r2 = r2_score(y_train, preds)
-        ax.text(0.05, 0.95, f'R²={r2:.3f}', transform=ax.transAxes, fontsize=12,
-                bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.7))
-    
-    plt.tight_layout()
-    plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_fit_train.png", dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"✓ Zapisano results/anfis_{dataset}_{n_memb}memb_fit_train.png")
+        print(f"[INFO] R² = {r2:.4f}")
+
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        fig.suptitle(f"{dataset} - {n_memb}MF | Diagnostyka modelu", fontsize=16)
+
+        # 1. Scatter: rzeczywiste vs predykcje
+        ax = axes[0, 0]
+        ax.scatter(y_train, preds, s=20, alpha=0.6, color='blue')
+        min_val = min(y_train.min(), preds.min())
+        max_val = max(y_train.max(), preds.max())
+        ax.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='y=x')
+        ax.set_xlabel("Rzeczywiste")
+        ax.set_ylabel("Predykcja")
+        ax.set_title("Rzeczywiste vs Predykcja")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # 2. Histogram reszt
+        ax = axes[0, 1]
+        ax.hist(residuals, bins=50, color='green', alpha=0.7, edgecolor='black')
+        ax.axvline(0, color='red', linestyle='--', linewidth=2, label='Średnia = 0')
+        ax.set_xlabel("Reszta (y - ŷ)")
+        ax.set_ylabel("Liczba obserwacji")
+        ax.set_title(f"Histogram reszt\n(R²={r2:.3f})")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+        # 3. Reszty vs Predykcje (sprawdzenie heteroskedastyczności)
+        ax = axes[1, 0]
+        ax.scatter(preds, residuals, s=20, alpha=0.6, color='purple')
+        ax.axhline(0, color='red', linestyle='--', linewidth=2)
+        ax.set_xlabel("Predykcja")
+        ax.set_ylabel("Reszta")
+        ax.set_title("Reszty vs Predykcja")
+        ax.grid(True, alpha=0.3)
+
+        # 4. QQ plot
+        from scipy import stats
+        ax = axes[1, 1]
+        stats.probplot(residuals, dist="norm", plot=ax)
+        ax.set_title("QQ Plot reszt")
+        ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_diag_train.png", dpi=300, bbox_inches="tight")
+        plt.close()
+
+        print(f"✓ Zapisano wykresy diagnostyczne: results/anfis_{dataset}_{n_memb}memb_diag_train.png")
 
 
 # -------------------------------------------------------------

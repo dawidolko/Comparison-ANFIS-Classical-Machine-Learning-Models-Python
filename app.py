@@ -131,19 +131,34 @@ def show_anfis_results():
     with col3:
         n_memb = st.selectbox("Liczba funkcji przynależności:", [2, 3], key="n_memb")
     with col4:
-        st.metric("Liczba reguł", f"{n_memb ** (11 if dataset != 'concrete' else 8)}")
+        # Wine: 11 featurów, Concrete: 8 featurów → liczba reguł = n_memb^features
+        n_features = 11 if dataset != "concrete" else 8
+        n_rules = n_memb ** n_features
+        st.metric("Liczba reguł", f"{n_rules:,}".replace(",", " "))
 
     # Ścieżki do plików
     results_file = f"results/anfis_{dataset}_{n_memb}memb_results.json"
     cv_file = f"results/anfis_{dataset}_{n_memb}memb_cv.json"
     train_img = f"results/anfis_{dataset}_{n_memb}memb_training.png"
-    fit_img = f"results/anfis_{dataset}_{n_memb}memb_fit_train.png"
     mf_img = f"results/membership_functions_{dataset}_{n_memb}memb.png"
 
+    # Rodzaj zadania
+    is_classification = (dataset != "concrete")
+
+    if is_classification:
+        fit_img = f"results/anfis_{dataset}_{n_memb}memb_confmat_train.png"
+        fit_title = "📊 Macierz pomyłek (zbiór treningowy)"
+        report_file = f"results/anfis_{dataset}_{n_memb}memb_class_report_train.txt"
+    else:
+        fit_img = f"results/anfis_{dataset}_{n_memb}memb_diag_train.png"
+        fit_title = "📊 Diagnostyka modelu (zbiór treningowy)"
+        report_file = None
+
+    # Ładowanie wyników
     results = load_json_safe(results_file)
     if not results:
         st.warning(f"⚠ Brak wyników dla dataset={dataset}, n_memb={n_memb}")
-        st.info("Uruchom: ./setup.sh lub train_anfis.py, aby wygenerować wyniki.")
+        st.info("Uruchom: `./setup.sh` lub `train_anfis.py`, aby wygenerować wyniki.")
         return
 
     st.markdown("---")
@@ -164,8 +179,14 @@ def show_anfis_results():
     display_image_if_exists(train_img)
 
     st.markdown("---")
-    st.subheader("📊 Dopasowanie na zbiorze treningowym")
+    st.subheader(fit_title)
     display_image_if_exists(fit_img)
+
+    # Wyświetl raport tekstowy dla klasyfikacji
+    if is_classification and report_file and os.path.exists(report_file):
+        with st.expander("📝 Szczegółowy raport klasyfikacyjny (trening)"):
+            with open(report_file, "r") as f:
+                st.text(f.read())
 
     st.markdown("---")
     st.subheader("🔧 Funkcje przynależności (Gaussian MF)")
