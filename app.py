@@ -1,241 +1,241 @@
-import streamlit as st
-import json
-import os
-from PIL import Image
-import pandas as pd
+import streamlit as st  # Biblioteka do tworzenia aplikacji webowych
+import json  # Biblioteka do operacji na JSON
+import os  # Biblioteka do operacji na systemie plików
+from PIL import Image  # Biblioteka do ładowania i przetwarzania obrazów
+import pandas as pd  # Biblioteka do operacji na ramkach danych
 
 # -------------------------------------------------------------
 # Konfiguracja aplikacji
 # -------------------------------------------------------------
-st.set_page_config(page_title="ANFIS Comparison", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="ANFIS Comparison", page_icon="🤖", layout="wide")  # Ustawia tytuł, ikonę i szeroki layout aplikacji Streamlit
 
 
 # -------------------------------------------------------------
 # Funkcje pomocnicze
 # -------------------------------------------------------------
-def load_json_safe(path: str):
+def load_json_safe(path: str):  # Funkcja bezpiecznie wczytująca plik JSON
     """
-    Bezpiecznie wczytuje plik JSON.
+    Bezpiecznie wczytuje plik JSON.  # Opis funkcji
     
-    Args:
-        path: ścieżka do pliku JSON
+    Args:  # Sekcja argumentów
+        path: ścieżka do pliku JSON  # Parametr: ścieżka do pliku
         
-    Returns:
-        Dict z danymi lub None w przypadku błędu lub braku pliku
+    Returns:  # Sekcja zwracanych wartości
+        Dict z danymi lub None w przypadku błędu lub braku pliku  # Co funkcja zwraca
     """
-    if os.path.exists(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return None
-    return None
+    if os.path.exists(path):  # Sprawdza czy plik istnieje
+        try:  # Próbuje wczytać plik
+            with open(path, "r", encoding="utf-8") as f:  # Otwiera plik w trybie odczytu z kodowaniem UTF-8
+                return json.load(f)  # Wczytuje i zwraca dane JSON
+        except Exception:  # Łapie wszelkie błędy
+            return None  # Zwraca None w przypadku błędu
+    return None  # Zwraca None jeśli plik nie istnieje
 
 
-def display_image_if_exists(path: str, caption: str = None):
+def display_image_if_exists(path: str, caption: str = None):  # Funkcja wyświetlająca obrazek jeśli istnieje
     """
-    Wyświetla obrazek w Streamlit jeśli plik istnieje.
+    Wyświetla obrazek w Streamlit jeśli plik istnieje.  # Opis funkcji
     
-    Args:
-        path: ścieżka do pliku graficznego
-        caption: opcjonalny podpis pod obrazkiem
+    Args:  # Sekcja argumentów
+        path: ścieżka do pliku graficznego  # Parametr: ścieżka do obrazka
+        caption: opcjonalny podpis pod obrazkiem  # Parametr: opcjonalny opis
         
-    Returns:
-        True jeśli obrazek został wyświetlony, False w przeciwnym razie
+    Returns:  # Sekcja zwracanych wartości
+        True jeśli obrazek został wyświetlony, False w przeciwnym razie  # Co funkcja zwraca
     """
-    if os.path.exists(path):
-        st.image(Image.open(path), use_column_width=True, caption=caption)
-        return True
-    return False
+    if os.path.exists(path):  # Sprawdza czy plik istnieje
+        st.image(Image.open(path), use_column_width=True, caption=caption)  # Otwiera i wyświetla obrazek z pełną szerokością kolumny i opcjonalnym podpisem
+        return True  # Zwraca True jeśli obrazek został wyświetlony
+    return False  # Zwraca False jeśli plik nie istnieje
 
 
 # -------------------------------------------------------------
 # Strona główna
 # -------------------------------------------------------------
-def show_home():
+def show_home():  # Funkcja wyświetlająca stronę główną aplikacji
     """
-    Wyświetla stronę główną aplikacji Streamlit.
+    Wyświetla stronę główną aplikacji Streamlit.  # Opis funkcji
     
-    Zawiera:
-    - Opis projektów (Wine Quality, Concrete Strength)
-    - Architekturę modelu ANFIS
-    - Informacje o preprocessingu
-    - Porównywane modele
+    Zawiera:  # Lista zawartości
+    - Opis projektów (Wine Quality, Concrete Strength)  # Opis zadań
+    - Architekturę modelu ANFIS  # Schemat warstw
+    - Informacje o preprocessingu  # Przetwarzanie danych
+    - Porównywane modele  # Lista modeli ML
     """
-    st.title("🤖 ANFIS - Adaptive Neuro-Fuzzy Inference System")
-    st.markdown("### Porównanie ANFIS z klasycznymi metodami ML")
+    st.title("🤖 ANFIS - Adaptive Neuro-Fuzzy Inference System")  # Wyświetla tytuł główny aplikacji
+    st.markdown("### Porównanie ANFIS z klasycznymi metodami ML")  # Wyświetla podtytuł
 
-    st.markdown("""
+    st.markdown("""  # Rozpoczyna wieloliniowy markdown z opisem projektów
     ---
-    ## 📊 Dwa problemy:
+    ## 📊 Dwa problemy:  # Nagłówek sekcji
 
-    ### 1. 🍷 Wine Quality Classification (UCI Dataset)
-    - **3 datasety**: all (6497), red (1599), white (4898) próbek
-    - **11 cech**: kwasowość, alkohol, pH, siarczan, chlorki, itp.
-    - **Zadanie**: Klasyfikacja binarna — dobra (>5) vs zła (≤5) jakość
+    ### 1. 🍷 Wine Quality Classification (UCI Dataset)  # Pierwszy problem - klasyfikacja wina
+    - **3 datasety**: all (6497), red (1599), white (4898) próbek  # Liczba próbek w każdym datasecie
+    - **11 cech**: kwasowość, alkohol, pH, siarczan, chlorki, itp.  # Lista cech wina
+    - **Zadanie**: Klasyfikacja binarna — dobra (>5) vs zła (≤5) jakość  # Opis zadania klasyfikacji
 
-    ### 2. 🏗️ Concrete Strength Prediction
-    - **1030 próbek** betonu
-    - **8 cech**: cement, woda, kruszywo, wiek, itp.
-    - **Zadanie**: Predykcja wytrzymałości na ściskanie (MPa)
-
-    ---
-    ## 🧠 Architektura ANFIS:
-
-    1. **Fuzzy Layer** — Fuzzyfikacja wejść funkcjami Gaussa  
-       μ(x) = exp(-(x-c)² / σ²)
-    2. **Rule Layer** — Kombinacje reguł (AND / iloczyn)
-    3. **Norm Layer** — Normalizacja wag
-    4. **Defuzz Layer** — Model Takagi–Sugeno (TSK-1)
-    5. **Summation Layer** — Suma ważona reguł
+    ### 2. 🏗️ Concrete Strength Prediction  # Drugi problem - predykcja wytrzymałości betonu
+    - **1030 próbek** betonu  # Liczba próbek w datasecie
+    - **8 cech**: cement, woda, kruszywo, wiek, itp.  # Lista cech betonu
+    - **Zadanie**: Predykcja wytrzymałości na ściskanie (MPa)  # Opis zadania regresji
 
     ---
-    ## 📦 Preprocessing:
+    ## 🧠 Architektura ANFIS:  # Nagłówek sekcji architektury
 
-    **Wine Quality:**
-    - Binaryzacja jakości >5 → 1, ≤5 → 0  
-    - Podział 80/20 (stratyfikowany)
-    - StandardScaler per dataset
-
-    **Concrete:**
-    - Normalizacja cech
-    - Podział 80/20
-    - StandardScaler
+    1. **Fuzzy Layer** — Fuzzyfikacja wejść funkcjami Gaussa  # Warstwa 1: funkcje przynależności
+       μ(x) = exp(-(x-c)² / σ²)  # Wzor matematyczny funkcji Gaussa
+    2. **Rule Layer** — Kombinacje reguł (AND / iloczyn)  # Warstwa 2: aktywacja reguł
+    3. **Norm Layer** — Normalizacja wag  # Warstwa 3: normalizacja
+    4. **Defuzz Layer** — Model Takagi–Sugeno (TSK-1)  # Warstwa 4: konsekwenty liniowe
+    5. **Summation Layer** — Suma ważona reguł  # Warstwa 5: agregacja
 
     ---
-    ## 🎯 Modele porównywane:
-    - **ANFIS** (2/3 MF)
-    - **Neural Network**
-    - **SVM (RBF)**
-    - **Random Forest**
-    """)
+    ## 📦 Preprocessing:  # Nagłówek sekcji preprocessing
+
+    **Wine Quality:**  # Preprocessing dla wina
+    - Binaryzacja jakości >5 → 1, ≤5 → 0  # Konwersja na problem binarny
+    - Podział 80/20 (stratyfikowany)  # Proporcje train/test
+    - StandardScaler per dataset  # Normalizacja cech
+
+    **Concrete:**  # Preprocessing dla betonu
+    - Normalizacja cech  # Standaryzacja wartości cech
+    - Podział 80/20  # Proporcje train/test
+    - StandardScaler  # Narzędzie do normalizacji
+
+    ---
+    ## 🎯 Modele porównywane:  # Nagłówek sekcji modeli
+    - **ANFIS** (2/3 MF)  # Model ANFIS z 2 lub 3 funkcjami przynależności
+    - **Neural Network**  # Sieć neuronowa
+    - **SVM (RBF)**  # Support Vector Machine z jądrem RBF
+    - **Random Forest**  # Las losowy
+    """)  # Kończy wieloliniowy markdown
 
 
 # -------------------------------------------------------------
 # Sekcja wyników ANFIS
 # -------------------------------------------------------------
-def show_anfis_results():
-    st.title("📊 ANFIS — Wyniki Treningu")
+def show_anfis_results():  # Funkcja wyświetlająca wyniki treningu ANFIS
+    st.title("📊 ANFIS — Wyniki Treningu")  # Wyświetla tytuł sekcji
 
-    col1, col2 = st.columns(2)
-    with col1:
-        problem = st.selectbox("Wybierz problem:", ["Wine Quality", "Concrete Strength"], key="problem_select")
-    with col2:
-        if problem == "Wine Quality":
-            dataset = st.selectbox("Dataset:", ["all", "red", "white"], key="wine_dataset")
-        else:
-            dataset = "concrete"
-            st.info("Dataset: Concrete (1030 próbek)")
+    col1, col2 = st.columns(2)  # Tworzy dwie kolumny dla widgetów
+    with col1:  # W pierwszej kolumnie
+        problem = st.selectbox("Wybierz problem:", ["Wine Quality", "Concrete Strength"], key="problem_select")  # Widget wyboru problemu
+    with col2:  # W drugiej kolumnie
+        if problem == "Wine Quality":  # Jeśli wybrano Wine Quality
+            dataset = st.selectbox("Dataset:", ["all", "red", "white"], key="wine_dataset")  # Widget wyboru datasetu wine
+        else:  # W przeciwnym razie (Concrete)
+            dataset = "concrete"  # Ustawia dataset na concrete
+            st.info("Dataset: Concrete (1030 próbek)")  # Wyświetla informację o datasecie
 
-    col3, col4 = st.columns(2)
-    with col3:
-        n_memb = st.selectbox("Liczba funkcji przynależności:", [2, 3], key="n_memb")
-    with col4:
-        # Wine: 11 featurów, Concrete: 8 featurów → liczba reguł = n_memb^features
-        n_features = 11 if dataset != "concrete" else 8
-        n_rules = n_memb ** n_features
-        st.metric("Liczba reguł", f"{n_rules:,}".replace(",", " "))
+    col3, col4 = st.columns(2)  # Tworzy dwie kolumny dla liczby MF i reguł
+    with col3:  # W trzeciej kolumnie
+        n_memb = st.selectbox("Liczba funkcji przynależności:", [2, 3], key="n_memb")  # Widget wyboru liczby MF
+    with col4:  # W czwartej kolumnie
+        # Wine: 11 featureów, Concrete: 8 featureów → liczba reguł = n_memb^features
+        n_features = 11 if dataset != "concrete" else 8  # Ustawia liczbę cech zależnie od datasetu
+        n_rules = n_memb ** n_features  # Oblicza liczbę reguł jako potęgę n_memb^n_features
+        st.metric("Liczba reguł", f"{n_rules:,}".replace(",", " "))  # Wyświetla metryki liczby reguł z formatowaniem
 
     # Ścieżki do plików
-    results_file = f"results/anfis_{dataset}_{n_memb}memb_results.json"
-    cv_file = f"results/anfis_{dataset}_{n_memb}memb_cv.json"
-    train_img = f"results/anfis_{dataset}_{n_memb}memb_training.png"
-    mf_img = f"results/membership_functions_{dataset}_{n_memb}memb.png"
+    results_file = f"results/anfis_{dataset}_{n_memb}memb_results.json"  # Ścieżka do pliku wyników JSON
+    cv_file = f"results/anfis_{dataset}_{n_memb}memb_cv.json"  # Ścieżka do pliku cross-validation JSON
+    train_img = f"results/anfis_{dataset}_{n_memb}memb_training.png"  # Ścieżka do wykresu krzywych uczenia
+    mf_img = f"results/membership_functions_{dataset}_{n_memb}memb.png"  # Ścieżka do wykresu funkcji przynależności
 
     # Rodzaj zadania
-    is_classification = (dataset != "concrete")
+    is_classification = (dataset != "concrete")  # Sprawdza czy zadanie to klasyfikacja (wine) czy regresja (concrete)
 
-    if is_classification:
-        fit_img = f"results/anfis_{dataset}_{n_memb}memb_confmat_train.png"
-        fit_title = "📊 Macierz pomyłek (zbiór treningowy)"
-        report_file = f"results/anfis_{dataset}_{n_memb}memb_class_report_train.txt"
-    else:
-        fit_img = f"results/anfis_{dataset}_{n_memb}memb_diag_train.png"
-        fit_title = "📊 Diagnostyka modelu (zbiór treningowy)"
-        report_file = None
+    if is_classification:  # Jeśli zadanie to klasyfikacja
+        fit_img = f"results/anfis_{dataset}_{n_memb}memb_confmat_train.png"  # Ścieżka do macierzy pomyłek
+        fit_title = "📊 Macierz pomyłek (zbiór treningowy)"  # Tytuł sekcji dla klasyfikacji
+        report_file = f"results/anfis_{dataset}_{n_memb}memb_class_report_train.txt"  # Ścieżka do raportu klasyfikacyjnego
+    else:  # W przeciwnym razie (regresja)
+        fit_img = f"results/anfis_{dataset}_{n_memb}memb_diag_train.png"  # Ścieżka do wykresów diagnostycznych
+        fit_title = "📊 Diagnostyka modelu (zbiór treningowy)"  # Tytuł sekcji dla regresji
+        report_file = None  # Brak raportu tekstowego dla regresji
 
     # Ładowanie wyników
-    results = load_json_safe(results_file)
-    if not results:
-        st.warning(f"⚠ Brak wyników dla dataset={dataset}, n_memb={n_memb}")
-        st.info("Uruchom: `./setup.sh` lub `train_anfis.py`, aby wygenerować wyniki.")
-        return
+    results = load_json_safe(results_file)  # Wczytuje wyniki z pliku JSON
+    if not results:  # Jeśli wyniki nie istnieją lub wystąpił błąd
+        st.warning(f"⚠ Brak wyników dla dataset={dataset}, n_memb={n_memb}")  # Wyświetla ostrzeżenie
+        st.info("Uruchom: `./setup.sh` lub `train_anfis.py`, aby wygenerować wyniki.")  # Wyświetla informację jak wygenerować wyniki
+        return  # Zakończa funkcję
 
-    st.markdown("---")
-    st.subheader("📈 Statystyki treningu")
+    st.markdown("---")  # Wyświetla separator poziomy
+    st.subheader("📈 Statystyki treningu")  # Wyświetla nagłówek sekcji statystyk
 
-    col1, col2, col3, col4 = st.columns(4)
-    if dataset == "concrete":
-        col1.metric("Train MAE", f"{results.get('train_mae', 0):.4f}")
-        col2.metric("Test MAE", f"{results.get('test_mae', 0):.4f}")
-    else:
-        col1.metric("Train Accuracy", f"{results.get('train_accuracy', 0):.4f}")
-        col2.metric("Test Accuracy", f"{results.get('test_accuracy', 0):.4f}")
-    col3.metric("Train Loss", f"{results.get('train_loss', 0):.4f}")
-    col4.metric("Test Loss", f"{results.get('test_loss', 0):.4f}")
+    col1, col2, col3, col4 = st.columns(4)  # Tworzy cztery kolumny dla metryk
+    if dataset == "concrete":  # Jeśli dataset to concrete (regresja)
+        col1.metric("Train MAE", f"{results.get('train_mae', 0):.4f}")  # Wyświetla MAE treningowe
+        col2.metric("Test MAE", f"{results.get('test_mae', 0):.4f}")  # Wyświetla MAE testowe
+    else:  # W przeciwnym razie (klasyfikacja)
+        col1.metric("Train Accuracy", f"{results.get('train_accuracy', 0):.4f}")  # Wyświetla accuracy treningowe
+        col2.metric("Test Accuracy", f"{results.get('test_accuracy', 0):.4f}")  # Wyświetla accuracy testowe
+    col3.metric("Train Loss", f"{results.get('train_loss', 0):.4f}")  # Wyświetla stratę treningową
+    col4.metric("Test Loss", f"{results.get('test_loss', 0):.4f}")  # Wyświetla stratę testową
 
-    st.markdown("---")
-    st.subheader("📉 Krzywe uczenia")
-    display_image_if_exists(train_img)
+    st.markdown("---")  # Wyświetla separator poziomy
+    st.subheader("📉 Krzywe uczenia")  # Wyświetla nagłówek sekcji krzywych uczenia
+    display_image_if_exists(train_img)  # Wyświetla wykres krzywych uczenia jeśli istnieje
 
-    st.markdown("---")
-    st.subheader(fit_title)
-    display_image_if_exists(fit_img)
+    st.markdown("---")  # Wyświetla separator poziomy
+    st.subheader(fit_title)  # Wyświetla tytuł sekcji (macierz pomyłek lub diagnostyka)
+    display_image_if_exists(fit_img)  # Wyświetla wykres macierzy pomyłek lub diagnostyki jeśli istnieje
 
     # Wyświetl raport tekstowy dla klasyfikacji
-    if is_classification and report_file and os.path.exists(report_file):
-        with st.expander("📝 Szczegółowy raport klasyfikacyjny (trening)"):
-            with open(report_file, "r") as f:
-                st.text(f.read())
+    if is_classification and report_file and os.path.exists(report_file):  # Jeśli klasyfikacja i raport istnieje
+        with st.expander("📝 Szczegółowy raport klasyfikacyjny (trening)"):  # Tworzy rozwijaną sekcję
+            with open(report_file, "r") as f:  # Otwiera plik raportu
+                st.text(f.read())  # Wyświetla treść raportu jako tekst
 
-    st.markdown("---")
-    st.subheader("🔧 Funkcje przynależności (Gaussian MF)")
-    display_image_if_exists(mf_img)
+    st.markdown("---")  # Wyświetla separator poziomy
+    st.subheader("🔧 Funkcje przynależności (Gaussian MF)")  # Wyświetla nagłówek sekcji MF
+    display_image_if_exists(mf_img)  # Wyświetla wykres funkcji przynależności jeśli istnieje
 
     # Wyniki cross-walidacji
-    cv_data = load_json_safe(cv_file)
-    if cv_data:
-        st.markdown("---")
-        st.subheader("✅ Cross-Walidacja (5-fold)")
-        col1, col2 = st.columns(2)
+    cv_data = load_json_safe(cv_file)  # Wczytuje dane cross-validation z pliku JSON
+    if cv_data:  # Jeśli dane CV istnieją
+        st.markdown("---")  # Wyświetla separator poziomy
+        st.subheader("✅ Cross-Walidacja (5-fold)")  # Wyświetla nagłówek sekcji CV
+        col1, col2 = st.columns(2)  # Tworzy dwie kolumny dla metryk CV
 
-        if dataset == "concrete":
-            metric_name = cv_data.get("metric_type", "mae").upper()
-            col1.metric(f"Mean {metric_name}", f"{cv_data.get('mean_mae', 0):.4f}")
-            col2.metric(f"Std {metric_name}", f"± {cv_data.get('std_mae', 0):.4f}")
-        else:
-            col1.metric("Mean Accuracy", f"{cv_data.get('mean_accuracy', 0):.4f}")
-            col2.metric("Std Accuracy", f"± {cv_data.get('std_accuracy', 0):.4f}")
+        if dataset == "concrete":  # Jeśli dataset to concrete (regresja)
+            metric_name = cv_data.get("metric_type", "mae").upper()  # Pobiera typ metryki i konwertuje do wielkich liter
+            col1.metric(f"Mean {metric_name}", f"{cv_data.get('mean_mae', 0):.4f}")  # Wyświetla średnią MAE
+            col2.metric(f"Std {metric_name}", f"± {cv_data.get('std_mae', 0):.4f}")  # Wyświetla odchylenie standardowe MAE
+        else:  # W przeciwnym razie (klasyfikacja)
+            col1.metric("Mean Accuracy", f"{cv_data.get('mean_accuracy', 0):.4f}")  # Wyświetla średnią accuracy
+            col2.metric("Std Accuracy", f"± {cv_data.get('std_accuracy', 0):.4f}")  # Wyświetla odchylenie standardowe accuracy
 
-        if "folds" in cv_data:
-            fold_df = pd.DataFrame(cv_data["folds"])
-            st.markdown("**Wyniki dla każdego folda:**")
-            st.dataframe(fold_df, use_container_width=True)
+        if "folds" in cv_data:  # Jeśli dane zawierają wyniki foldów
+            fold_df = pd.DataFrame(cv_data["folds"])  # Tworzy DataFrame z wyników każdego folda
+            st.markdown("**Wyniki dla każdego folda:**")  # Wyświetla nagłówek tabeli
+            st.dataframe(fold_df, use_container_width=True)  # Wyświetla tabelę z wynikami foldów
 
 
 # -------------------------------------------------------------
 # Sekcja reguł ANFIS
 # -------------------------------------------------------------
-def show_rules():
-    st.title("📜 Reguły ANFIS i Historia Uczenia")
+def show_rules():  # Funkcja wyświetlająca reguły rozmyte ANFIS
+    st.title("📜 Reguły ANFIS i Historia Uczenia")  # Wyświetla tytuł sekcji
 
-    col1, col2 = st.columns(2)
-    with col1:
-        problem = st.selectbox("Wybierz problem:", ["Wine Quality", "Concrete Strength"], key="rules_problem")
-    with col2:
-        if problem == "Wine Quality":
-            dataset = st.selectbox("Dataset:", ["all", "red", "white"], key="rules_dataset")
-        else:
-            dataset = "concrete"
-            st.info("Dataset: Concrete")
+    col1, col2 = st.columns(2)  # Tworzy dwie kolumny dla widgetów
+    with col1:  # W pierwszej kolumnie
+        problem = st.selectbox("Wybierz problem:", ["Wine Quality", "Concrete Strength"], key="rules_problem")  # Widget wyboru problemu
+    with col2:  # W drugiej kolumnie
+        if problem == "Wine Quality":  # Jeśli wybrano Wine Quality
+            dataset = st.selectbox("Dataset:", ["all", "red", "white"], key="rules_dataset")  # Widget wyboru datasetu wine
+        else:  # W przeciwnym razie (Concrete)
+            dataset = "concrete"  # Ustawia dataset na concrete
+            st.info("Dataset: Concrete")  # Wyświetla informację o datasecie
 
-    n_memb = st.selectbox("Liczba MF:", [2, 3], key="rules_memb")
+    n_memb = st.selectbox("Liczba MF:", [2, 3], key="rules_memb")  # Widget wyboru liczby funkcji przynależności
 
-    rules_file = f"results/anfis_{dataset}_{n_memb}memb_rules.json"
-    results_file = f"results/anfis_{dataset}_{n_memb}memb_results.json"
+    rules_file = f"results/anfis_{dataset}_{n_memb}memb_rules.json"  # Ścieżka do pliku reguł JSON
+    results_file = f"results/anfis_{dataset}_{n_memb}memb_results.json"  # Ścieżka do pliku wyników JSON
 
-    rules_data = load_json_safe(rules_file)
-    results = load_json_safe(results_file)
+    rules_data = load_json_safe(rules_file)  # Wczytuje dane reguł z pliku JSON
+    results = load_json_safe(results_file)  # Wczytuje wyniki z pliku JSON
 
     if rules_data:
         st.markdown("---")
