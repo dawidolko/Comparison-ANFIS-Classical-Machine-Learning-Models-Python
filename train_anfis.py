@@ -143,6 +143,13 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
         )
     ]
 
+    # ---------------------- PRZED TRENINGIEM - zapisz początkowe MF ----------------------
+    anfis_model.update_weights()
+    centers_before, sigmas_before = anfis_model.get_membership_functions()
+    np.save(f"results/mf_centers_before_{dataset}_{n_memb}memb.npy", centers_before)
+    np.save(f"results/mf_sigmas_before_{dataset}_{n_memb}memb.npy", sigmas_before)
+    print(f"✓ Zapisano MF PRZED treningiem: results/mf_*_before_{dataset}_{n_memb}memb.npy")
+
     print("Rozpoczynam trening...\n")  # Informuje użytkownika o rozpoczęciu treningu
     history = anfis_model.model.fit(  # Trenuje model i zapisuje historię treningu
         X_train, y_train,  # Dane treningowe (cechy i etykiety)
@@ -150,6 +157,13 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
         epochs=epochs, batch_size=batch_size,  # Liczba epok i rozmiar batcha
         callbacks=callbacks, verbose=1  # Używa zdefiniowanych callbacków i wypisuje postęp
     )
+
+    # ---------------------- PO TRENINGU - zapisz końcowe MF ----------------------
+    anfis_model.update_weights()
+    centers_after, sigmas_after = anfis_model.get_membership_functions()
+    np.save(f"results/mf_centers_after_{dataset}_{n_memb}memb.npy", centers_after)
+    np.save(f"results/mf_sigmas_after_{dataset}_{n_memb}memb.npy", sigmas_after)
+    print(f"✓ Zapisano MF PO treningu: results/mf_*_after_{dataset}_{n_memb}memb.npy")
 
     # ---------------------- ewaluacja ----------------------
     anfis_model.model.load_weights(checkpoint_path)  # Ładuje najlepsze wagi zapisane podczas treningu
