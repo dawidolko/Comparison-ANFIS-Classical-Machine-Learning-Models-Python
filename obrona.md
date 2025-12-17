@@ -12,7 +12,7 @@
 
 ## 1. Podstawowe pytania o projekt
 
-### 🔹 Co to jest model TSK (Takagi-Sugeno-Kang)?
+### 🔹1.1 Co to jest model TSK (Takagi-Sugeno-Kang)?
 
 **Odpowiedź:** Model TSK to rodzaj systemu rozmytego, w którym **konsekwent reguły jest funkcją liniową** zamiast tradycyjnego zbioru rozmytego. W klasycznych systemach rozmytych (Mamdani) wynik reguły to zbiór rozmyty (np. "temperatura jest WYSOKA"), natomiast w TSK wynik to konkretna wartość liczbowa obliczona ze wzoru liniowego. Dzięki temu model TSK jest łatwiejszy do optymalizacji metodami gradientowymi i daje precyzyjne wyniki numeryczne, co czyni go idealnym do zastosowań w sieciach neuronowych jak ANFIS.
 
@@ -39,7 +39,7 @@ return w_norm * y  # Ważona kombinacja
 
 ---
 
-### 🔹 Co to jest funkcja przynależności (Membership Function)?
+### 🔹 1.2 Co to jest funkcja przynależności (Membership Function)?
 
 **Odpowiedź:** Funkcja przynależności μ(x) określa **stopień przynależności** elementu x do zbioru rozmytego - czyli "jak bardzo" dany element pasuje do danej kategorii. W przeciwieństwie do logiki klasycznej (gdzie element albo należy, albo nie należy do zbioru), logika rozmyta pozwala na częściową przynależność wyrażoną liczbą z przedziału [0, 1]. Na przykład, wino o zawartości alkoholu 11% może mieć przynależność 0.7 do zbioru "mocne" i 0.3 do zbioru "średnie" - to pozwala modelować niepewność i płynne przejścia między kategoriami.
 
@@ -73,7 +73,7 @@ def call(self, x):
 
 ---
 
-### 🔹 Co to jest preprocessing (przetwarzanie wstępne)?
+### 🔹 1.3 Co to jest preprocessing (przetwarzanie wstępne)?
 
 **Odpowiedź:** Preprocessing to **przygotowanie surowych danych** przed uczeniem modelu - jest to kluczowy etap, który bezpośrednio wpływa na jakość wyników. Surowe dane często mają różne skale (np. pH 0-14, alkohol 8-15%), zawierają braki lub są w nieodpowiednim formacie, co utrudnia uczenie modeli. Preprocessing ujednolica dane, usuwa szum i przekształca je do postaci optymalnej dla algorytmów uczenia maszynowego - bez tego modele mogłyby faworyzować cechy o większych wartościach lub w ogóle nie zbiegać.
 
@@ -109,7 +109,7 @@ X_test = scaler.transform(X_test)        # tylko transformuj (te same parametry!
 
 ---
 
-### 🔹 Co to jest ANFIS?
+### 🔹 1.4 Co to jest ANFIS?
 
 **Odpowiedź:** ANFIS (Adaptive Neuro-Fuzzy Inference System) to **hybrydowa architektura** łącząca zalety dwóch podejść: logiki rozmytej i sieci neuronowych. System rozmyty zapewnia interpretowalność - możemy odczytać reguły typu "JEŚLI alkohol jest WYSOKI i kwasowość jest NISKA TO wino jest DOBRE", podczas gdy sieć neuronowa automatycznie uczy się optymalnych parametrów tych reguł z danych. ANFIS łączy więc "białą skrzynkę" (zrozumiałe reguły) z mocą uczenia "czarnej skrzynki" (sieci neuronowe), dając model który jest zarówno skuteczny jak i wyjaśnialny.
 
@@ -136,7 +136,7 @@ Wejście → [1.Fuzzy] → [2.Rule] → [3.Norm] → [4.Defuzz] → [5.Sum] → 
 
 ---
 
-### 🔹 Jak działa "losowa linia" (inicjalizacja wag)?
+### 🔹 1.5 Jak działa "losowa linia" (inicjalizacja wag)?
 
 **Odpowiedź:** Przy tworzeniu modelu wszystkie parametry (wagi) są inicjalizowane **losowo** z określonych rozkładów - to kluczowe dla prawidłowego uczenia. Gdybyśmy zainicjowali wszystkie wagi tak samo (np. zerami), to wszystkie neurony/reguły uczyłyby się tego samego - nie byłoby różnorodności. Losowa inicjalizacja "łamie symetrię" i pozwala różnym częściom sieci specjalizować się w różnych wzorcach.
 
@@ -177,7 +177,7 @@ self.sigma = self.add_weight(
 
 ## 2. Pytania o ANFIS
 
-### 🔹 Co to jest walidacja krzyżowa (cross-validation)?
+### 🔹 1.6 Co to jest walidacja krzyżowa (cross-validation)?
 
 **Odpowiedź:** K-krotna walidacja krzyżowa to technika oceny modelu, która pozwala wiarygodnie oszacować jak model będzie działał na nowych danych. Problem z pojedynczym podziałem train/test polega na tym, że wynik zależy od "szczęścia" - który zestaw danych trafił do testu. Cross-validation rozwiązuje to przez wielokrotne testowanie: każda próbka jest dokładnie raz w zbiorze testowym, więc dostajemy stabilną ocenę uśrednioną z K eksperymentów.
 
@@ -210,7 +210,7 @@ def cross_validate_anfis(n_memb=2, batch_size=32, dataset="all", n_splits=5, epo
 
 ---
 
-### 🔹 Co mierzy Accuracy?
+### 🔹 1.7 Co mierzy Accuracy?
 
 **Odpowiedź:** Accuracy (dokładność) mierzy **procent poprawnych klasyfikacji** - czyli ile razy model trafnie przewidział klasę spośród wszystkich próbek. Jest to najprostsza i najbardziej intuicyjna metryka: jeśli accuracy = 75%, oznacza to że model poprawnie sklasyfikował 75 na 100 próbek. Accuracy odpowiada na pytanie "jak często model ma rację?", ale nie rozróżnia między typami błędów (fałszywe alarmy vs przeoczenia).
 
@@ -240,7 +240,7 @@ anfis_model.model.compile(
 
 ---
 
-### 🔹 Co mierzy ROC AUC?
+### 🔹1.8 Co mierzy ROC AUC?
 
 **Odpowiedź:** ROC AUC (Area Under Receiver Operating Characteristic Curve) mierzy **zdolność modelu do rozróżniania klas** - czyli jak dobrze model potrafi oddzielić pozytywne przykłady od negatywnych. Wyobraź sobie, że model daje każdemu winu "score" od 0 do 1 - ROC AUC mówi, jak często wino dobre dostaje wyższy score niż wino słabe. AUC = 0.85 oznacza, że w 85% przypadków losowo wybrane dobre wino będzie miało wyższy score niż losowo wybrane słabe wino.
 
@@ -271,7 +271,7 @@ results['nn'] = {
 
 ---
 
-### 🔹 Co mierzy MSE / MAE?
+### 🔹 1.9 Co mierzy MSE / MAE?
 
 **Odpowiedź:** MSE i MAE to metryki dla zadań regresji, które mierzą **średni błąd predykcji** - czyli jak bardzo wartości przewidziane przez model różnią się od prawdziwych wartości.
 
@@ -307,7 +307,7 @@ if dataset == "concrete":
 
 ---
 
-### 🔹 Czym różni się hybrydowe uczenie ANFIS od uczenia standardowego?
+### 🔹1.10 Czym różni się hybrydowe uczenie ANFIS od uczenia standardowego?
 
 **Odpowiedź:** Główna różnica polega na tym, **jak trenowane są dwa rodzaje parametrów** w ANFIS: parametry przeslanki (premise) - czyli centra i szerokości funkcji przynależności, oraz parametry konkluzji (consequent) - czyli wagi w regule TSK.
 
@@ -335,7 +335,7 @@ self.model = tf.keras.Model(inputs=[x_in], outputs=[out], name=model_name)
 
 ---
 
-### 🔹 Czym ANFIS różni się od sieci MLP?
+### 🔹1.11 Czym ANFIS różni się od sieci MLP?
 
 **Odpowiedź:** Najważniejsza różnica to **interpretowalność**: ANFIS można "przeczytać" jako zbiór reguł IF-THEN zrozumiałych dla człowieka, podczas gdy MLP to "czarna skrzynka" gdzie wagi nie mają intuicyjnego znaczenia. W ANFIS wiesz, że "JEŚLI alkohol jest WYSOKI i kwasowość jest NISKA TO wino jest dobre" - w MLP masz tylko macierz liczb.
 
@@ -360,7 +360,7 @@ self.model = tf.keras.Model(inputs=[x_in], outputs=[out], name=model_name)
 
 ---
 
-### 🔹 Co to jest funkcja celu (loss function)?
+### 🔹1.12 Co to jest funkcja celu (loss function)?
 
 **Odpowiedź:** Funkcja celu (straty) mierzy **jak bardzo predykcje modelu różnią się od prawdziwych wartości** - to "ocena" którą model dostaje za swoje predykcje. Im mniejsza wartość loss, tym lepiej model przewiduje. Podczas uczenia model stara się zminimalizować tę funkcję, modyfikując swoje wagi - to jak uczeń poprawiający swoje odpowiedzi, żeby dostać lepszą ocenę. Funkcja loss musi być różniczkowalna, żeby można było obliczyć gradient i wiedzieć "w którą stronę" zmieniać wagi.
 
@@ -388,9 +388,9 @@ loss="mean_squared_error"
 
 ---
 
-### 🔹 Dlaczego optymalizator jest niezbędny?
+### 🔹 1.13 Dlaczego optymalizator jest niezbędny?
 
-**Odpowiedź:** Optymalizator to algorytm, który **aktualizuje wagi** modelu w kierunku minimalizacji funkcji celu - bez niego model nie mógłby się uczyć. Wyobraź sobie, że szukasz najniższego punktu w górach z zawiązanymi oczami - optymalizator to twój "zmysł dotyku" który mówi ci w którą stronę jest "w dół" (gradient) i jak duży krok zrobić (learning rate). Różne optymalizatory to jak różne strategie schodzenia: SGD idzie prosto w dół, Adam pamięta poprzednie kierunki i dostosowuje wielkość kroków.
+**Odpowiedź:** Optymalizator jest niezbędny, bo to on umożliwia uczenie się modelu – bez niego wagi sieci nie zmieniałyby się i model nie poprawiałby swoich predykcji. Optymalizator decyduje, jak i o ile zmienić parametry na podstawie gradientu, by minimalizować błąd (funkcję celu). Bez optymalizatora model byłby statyczny i nie nauczyłby się niczego z danych – to on „napędza” cały proces uczenia. Różne optymalizatory (SGD, Adam, Nadam) różnią się strategią aktualizacji wag, ale każdy z nich jest absolutnie konieczny, by model mógł się uczyć.
 
 **Podstawowa idea - Gradient Descent:**
 $$w_{t+1} = w_t - \eta \cdot \nabla L(w_t)$$
@@ -398,12 +398,6 @@ $$w_{t+1} = w_t - \eta \cdot \nabla L(w_t)$$
 - $w_t$ = aktualne wagi
 - $\eta$ = learning rate (jak duży krok)
 - $\nabla L$ = gradient funkcji straty (kierunek "w dół")
-
-**Dlaczego nie wystarczy zwykły SGD?**
-
-- SGD może utknąć w lokalnych minimach lub oscylować
-- Nowoczesne optymalizatory (Adam, Nadam) adaptują learning rate dla każdej wagi osobno
-- Używają "momentum" - pamiętają poprzedni kierunek, co przyspiesza zbieżność
 
 **Optymalizatory w projekcie:**
 
@@ -421,7 +415,7 @@ optimizer=tf.keras.optimizers.Nadam(learning_rate=0.001)
 
 ---
 
-### 🔹 Dlaczego stosuje się mini-batch?
+### 🔹 1.14 Dlaczego stosuje się mini-batch?
 
 **Odpowiedź:** Mini-batch to sposób przetwarzania danych podczas uczenia, gdzie zamiast używać wszystkich próbek naraz (zbyt wolne) lub pojedynczych próbek (zbyt chaotyczne), używamy małych porcji np. 32 próbek. To jak jedzenie - nie jesz całego obiadu na raz (zakrztusisz się), ani kęs po kęsie przez 3 godziny (za wolno), tylko normalne porcje. Mini-batch daje stabilniejszy gradient niż pojedyncze próbki, ale jest szybszy niż pełny batch i mieści się w pamięci GPU.
 
@@ -454,7 +448,7 @@ history = anfis_model.model.fit(
 
 ## 3. Zadania do wykonania
 
-### ✅ Zmiana liczby funkcji przynależności
+### ✅ 2.1 Zmiana liczby funkcji przynależności
 
 **Lokalizacja:** [train_anfis.py](train_anfis.py#L579-L585) lub wywołanie z CLI
 
@@ -474,7 +468,7 @@ train_anfis_model(n_memb=4, epochs=20, dataset="all")
 
 ---
 
-### ✅ Zmiana liczby iteracji (epok)
+### ✅ 2.2 Zmiana liczby iteracji (epok)
 
 **Lokalizacja:** [train_anfis.py](train_anfis.py#L583)
 
@@ -490,7 +484,7 @@ train_anfis_model(n_memb=2, epochs=50, dataset="all")
 
 ---
 
-### ✅ Uczenie na wybranych atrybutach
+### ✅ 2.3 Uczenie na wybranych atrybutach
 
 **Jak zmodyfikować:** Zmień listę `feature_columns` w [data_preprocessing.py](data_preprocessing.py#L40-42)
 
@@ -511,7 +505,7 @@ feature_columns = ['alcohol', 'volatile acidity', 'sulphates', 'citric acid', 'd
 
 ---
 
-### ✅ Wypisanie reguł ANFIS
+### ✅ 2.4 Wypisanie reguł ANFIS
 
 **Lokalizacja:** [train_anfis.py](train_anfis.py#L429-L500) - funkcja `extract_and_save_rules()`
 
@@ -537,7 +531,7 @@ feature_columns = ['alcohol', 'volatile acidity', 'sulphates', 'citric acid', 'd
 
 ---
 
-### ✅ Wyświetlenie funkcji przynależności PRZED i PO uczeniu
+### ✅ 2.5Wyświetlenie funkcji przynależności PRZED i PO uczeniu
 
 **Lokalizacja:** [train_anfis.py](train_anfis.py#L140-L160) - automatycznie zapisuje MF przed i po treningu
 
@@ -610,7 +604,7 @@ plt.show()
 
 ---
 
-### ✅ Zmiana optymalizatora / learning rate
+### ✅ 2.6 Zmiana optymalizatora / learning rate
 
 **Lokalizacja:** [train_anfis.py](train_anfis.py#L109-L121)
 
@@ -630,7 +624,7 @@ optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001)
 
 ---
 
-### ✅ Omówienie wykresu historii funkcji celu
+### ✅ 2.7 Omówienie wykresu historii funkcji celu
 
 **Lokalizacja wykresów:** `results/anfis_*_training.png`
 
@@ -660,104 +654,6 @@ optimizer=tf.keras.optimizers.RMSprop(learning_rate=0.001)
 
 ---
 
-## 4. Mapa projektu - gdzie co jest
-
-### 📁 Struktura plików
-
-```
-projekt/
-├── anfis.py                    # 🧠 Architektura ANFIS (5 warstw)
-├── data_preprocessing.py       # 📊 Preprocessing danych
-├── train_anfis.py              # 🏋️ Trening ANFIS + CV + wizualizacje
-├── train_comparison_models.py  # 🤖 Trening NN, SVM, RF
-├── compare_all_models.py       # 📈 Porównanie wykresowe
-├── visualize_membership_functions.py  # 📉 Wykresy MF
-├── app.py                      # 🌐 GUI Streamlit
-├── data/                       # Dane wejściowe
-│   ├── wine-quality/
-│   │   ├── winequality-red.csv
-│   │   └── winequality-white.csv
-│   └── concrete-strength/
-│       └── Concrete_Data.csv
-├── models/                     # Zapisane modele
-│   └── anfis_*_best_*.weights.h5
-└── results/                    # Wyniki i wykresy
-    ├── anfis_*_results.json    # Metryki
-    ├── anfis_*_rules.json      # Reguły
-    └── *.png                   # Wykresy
-```
-
-### 🔍 Gdzie szukać konkretnych rzeczy
-
-| Szukasz                | Plik                       | Linie   |
-| ---------------------- | -------------------------- | ------- |
-| Definicja warstw ANFIS | anfis.py                   | 158-273 |
-| Funkcja Gaussa (MF)    | anfis.py                   | 193-197 |
-| Kompilacja modelu      | train_anfis.py             | 109-121 |
-| Early stopping         | train_anfis.py             | 129-133 |
-| Ekstrakcja reguł       | train_anfis.py             | 429-500 |
-| Cross-validation       | train_anfis.py             | 507-572 |
-| Preprocessing wine     | data_preprocessing.py      | 9-95    |
-| Preprocessing concrete | data_preprocessing.py      | 98-143  |
-| Trening NN/SVM/RF      | train_comparison_models.py | 136-279 |
-| ROC AUC obliczenie     | train_comparison_models.py | 175     |
-
----
-
-## 5. Porównanie ANFIS vs modele klasyczne
-
-### 📊 Metodologia porównania
-
-**TEN SAM preprocessing dla wszystkich modeli:**
-
-1. Te same dane wejściowe (z plików .npy)
-2. Ta sama normalizacja (StandardScaler)
-3. Ten sam podział train/test (80/20, random_state=42)
-4. Te same metryki oceny
-
-**Gdzie w kodzie:**
-
-- ANFIS: [train_anfis.py](train_anfis.py) używa danych z `data/*.npy`
-- NN/SVM/RF: [train_comparison_models.py](train_comparison_models.py) używa tych samych danych
-
-### 📈 Porównywane modele
-
-| Model          | Typ           | Konfiguracja            | Plik wyników                 |
-| -------------- | ------------- | ----------------------- | ---------------------------- |
-| ANFIS (2 MF)   | Neuro-Fuzzy   | 2 funkcje Gaussa/cechę  | anfis_all_2memb_results.json |
-| ANFIS (3 MF)   | Neuro-Fuzzy   | 3 funkcje Gaussa/cechę  | anfis_all_3memb_results.json |
-| Neural Network | Deep Learning | 32→16→1, ReLU+Dropout   | nn_wine_results.json         |
-| SVM            | Kernel        | RBF, probability=True   | svm_wine_results.json        |
-| Random Forest  | Ensemble      | class_weight="balanced" | rf_wine_results.json         |
-
-### 🔬 Różnice między modelami
-
-| Cecha                 | ANFIS       | Neural Network | SVM               | Random Forest      |
-| --------------------- | ----------- | -------------- | ----------------- | ------------------ |
-| **Interpretowalność** | ✅ Wysoka   | ❌ Niska       | ❌ Niska          | ⚠️ Średnia         |
-| **Reguły IF-THEN**    | ✅ Tak      | ❌ Nie         | ❌ Nie            | ⚠️ Drzewa          |
-| **Uczenie**           | Gradient    | Gradient       | Quadratic prog.   | Bootstrap          |
-| **Regularyzacja**     | Dropout, ES | Dropout, ES    | C, gamma          | max_depth, n_trees |
-| **Czas treningu**     | Średni      | Średni         | Długi (duże dane) | Krótki             |
-
-### 📋 Metryki porównawcze
-
-**Wine Quality (klasyfikacja):**
-
-- Accuracy (%)
-- F1-score
-- ROC AUC
-- Train/Test Loss
-
-**Concrete Strength (regresja):**
-
-- MAE
-- Train/Test Loss
-
-**Wykresy porównawcze:** `results/model_comparison_*.png`
-
----
-
 ## 🎯 Szybka ściągawka na obronę
 
 ### Najważniejsze definicje
@@ -772,29 +668,6 @@ projekt/
 | **Optimizer**        | Algorytm aktualizujący wagi w kierunku mniejszego błędu        |
 | **Mini-batch**       | Podział danych na porcje dla efektywniejszego treningu         |
 
-### Komendy do uruchomienia
+## Co to jest gradient? (po ludzku)
 
-```bash
-# Całość:
-./setup.sh
-
-# Tylko preprocessing:
-python data_preprocessing.py
-
-# Tylko ANFIS:
-python train_anfis.py --datasets all --memb 2 3 --epochs 20 --cv
-
-# Tylko porównanie:
-python train_comparison_models.py
-
-# Wykresy:
-python visualize_membership_functions.py
-python compare_all_models.py
-
-# GUI:
-streamlit run app.py
-```
-
----
-
-**Powodzenia na obronie! 🎓**
+Gradient to po prostu "kierunek najszybszego spadku" – pokazuje, w którą stronę trzeba zmienić parametry (np. wagi w sieci), żeby najszybciej zmniejszyć błąd. Wyobraź sobie, że stoisz na górce i chcesz zejść na sam dół: gradient to strzałka pokazująca, gdzie jest najbardziej stromo w dół. W uczeniu maszynowym algorytm korzysta z gradientu, by krok po kroku poprawiać model i zbliżać się do najlepszego rozwiązania.
