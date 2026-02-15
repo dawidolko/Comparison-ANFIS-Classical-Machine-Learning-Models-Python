@@ -1,4 +1,4 @@
-# ANFIS-Wine-Quality-Classification 
+# ANFIS-Wine-Quality-Classification  
 
 > 🚀 **ANFIS vs Classical Machine Learning** - Comprehensive comparison of Adaptive Neuro-Fuzzy Inference System with traditional ML algorithms on real-world datasets
 
