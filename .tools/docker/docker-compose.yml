@@ -1,0 +1,15 @@
+services:
+  app:
+    build:
+      context: ../../
+      dockerfile: .tools/docker/Dockerfile
+    container_name: anfis-comparison
+    ports:
+      - "8501:8501"
+    volumes:
+      # Wyniki i wykresy maja przezyc restart kontenera.
+      - ../../results:/app/results
+      - ../../data:/app/data:ro
+    environment:
+      - TF_CPP_MIN_LOG_LEVEL=2
+    restart: unless-stopped
