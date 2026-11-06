@@ -1,12 +1,12 @@
 """
-Eksploracja danych dla projektu ANFIS vs ML Models
-Autorzy: Zespół IV_ROK 2025
+Data exploration for the ANFIS vs ML Models project
+Authors: Team IV_ROK 2025
 --------------------------------------------------
-Wygenerowano następujące wykresy:
- - rozkłady jakości wina / wytrzymałości betonu (zmienna docelowa),
- - macierze korelacji (Wine / Concrete),
- - rozkłady cech (Wine / Concrete),
- - pairploty (Wine / Concrete).
+The following plots are generated:
+ - wine quality / concrete strength distributions (target variable),
+ - correlation matrices (Wine / Concrete),
+ - feature distributions (Wine / Concrete),
+ - pairplots (Wine / Concrete).
 """
 
 import os
@@ -18,47 +18,47 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # ---------------------------------------------------------------
-# Ustawienia globalne
+# Global settings
 # ---------------------------------------------------------------
 sns.set(style="whitegrid", font_scale=1.0)
 os.makedirs("results", exist_ok=True)
 
 # ---------------------------------------------------------------
-# Pomocnicze funkcje
+# Helper functions
 # ---------------------------------------------------------------
 def safe_read_csv(paths, **kwargs):
     """
-    Próbowano wczytać plik CSV z listy możliwych ścieżek.
-    
-    Iterowano po liście ścieżek i zwrócono DataFrame z pierwszego istniejącego pliku.
-    Jeżeli żaden plik nie istniał, zwrócono None.
-    
+    Try to read a CSV file from a list of possible paths.
+
+    Iterates over the paths and returns a DataFrame from the first existing file.
+    If no file exists, returns None.
+
     Args:
-        paths: lista ścieżek do sprawdzenia
-        **kwargs: dodatkowe argumenty przekazywane do pd.read_csv()
-        
+        paths: list of paths to check
+        **kwargs: extra arguments passed to pd.read_csv()
+
     Returns:
-        DataFrame lub None
+        DataFrame or None
     """
     for path in paths:
         if os.path.exists(path):
             try:
                 return pd.read_csv(path, **kwargs)
             except Exception as e:
-                print(f"Błąd przy wczytywaniu {path}: {e}")
-    print(f"Nie znaleziono pliku CSV w ścieżkach: {paths}")
+                print(f"Error loading {path}: {e}")
+    print(f"CSV file not found in paths: {paths}")
     return None
 
 
 def save_plot(fig, filename):
     """
-    Wykres został zapisany bezpiecznie do katalogu results/.
-    
-    Zastosowano tight_layout, a figura została zamknięta po zapisie.
-    
+    Save the plot safely to the results/ directory.
+
+    Applies tight_layout and closes the figure after saving.
+
     Args:
-        fig: obiekt Figure z matplotlib
-        filename: nazwa pliku wyjściowego (np. "wykres.png")
+        fig: matplotlib Figure object
+        filename: output file name (e.g. "plot.png")
     """
     out_path = os.path.join("results", filename)
     plt.tight_layout()
@@ -68,10 +68,10 @@ def save_plot(fig, filename):
 
 
 # ---------------------------------------------------------------
-# EKSPLORACJA DANYCH — WINE QUALITY
+# DATA EXPLORATION - WINE QUALITY
 # ---------------------------------------------------------------
 print("=" * 60)
-print("EKSPLORACJA DANYCH - WINE QUALITY")
+print("DATA EXPLORATION - WINE QUALITY")
 print("=" * 60)
 
 red_wine = safe_read_csv(
@@ -88,46 +88,48 @@ if red_wine is not None and white_wine is not None:
     white_wine["type"] = 1
     wine_data = pd.concat([red_wine, white_wine], axis=0, ignore_index=True)
 
-    # Jakość została przekształcona na zmienną binarną
+    # Convert quality to a binary variable
     wine_data["quality_binary"] = (wine_data["quality"] > 5).astype(int)
 
-    print(f"Liczba próbek: {len(wine_data)}")
-    print(f"Liczba cech: {wine_data.shape[1] - 2}")
-    print(f"Rozkład klas: {wine_data['quality_binary'].value_counts().to_dict()}")
+    print(f"Samples: {len(wine_data)}")
+    print(f"Features: {wine_data.shape[1] - 2}")
+    print(f"Class distribution: {wine_data['quality_binary'].value_counts().to_dict()}")
 
-    # --- (1) Rozkład zmiennej docelowej (jakość wina) ---
+    # --- (1) Target variable distribution (wine quality) ---
     """
-    Wygenerowano rysunek 1: rozkład klasy jakości wina.
+    Generate figure 1: wine quality class distribution.
 
-    Lewy wykres: HISTOGRAM oryginalnych ocen jakości (0–10)
-      - Przyjęto 10 przedziałów (po jednym na każdy możliwy wynik),
-      - Oś X: ocena jakości (liczba całkowita 0–10),
-      - Oś Y: liczba próbek,
-      - Zastosowano metodę Matplotlib hist() z bins=10, każdy przedział reprezentuje jedną ocenę.
+    Left plot: HISTOGRAM of the original quality scores (0-10)
+      - 10 bins are used (one per possible score),
+      - X axis: quality score (integer 0-10),
+      - Y axis: number of samples,
+      - Uses Matplotlib hist() with bins=10, each bin represents one score.
 
-    Prawy wykres: WYKRES SŁUPKOWY binarnych klas
-      - Przyjęto dwie klasy: 0 (niska jakość, ocena ≤5) i 1 (wysoka jakość, ocena >5),
-      - Oś X: etykiety klas binarnych,
-      - Oś Y: liczba próbek w klasie,
-      - Celem było zobrazowanie niezrównoważenia klas w zadaniu klasyfikacji binarnej.
+    Right plot: BAR CHART of the binary classes
+      - Two classes are used: 0 (low quality, score <=5) and 1 (high quality,
+        score >5),
+      - X axis: binary class labels,
+      - Y axis: number of samples per class,
+      - The goal is to show the class imbalance in the binary classification
+        task.
     """
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
-    # Lewy: Histogram oryginalnych ocen jakości
+    # Left: histogram of the original quality scores
     axes[0].hist(wine_data["quality"], bins=10, edgecolor="black", color="steelblue", alpha=0.8)
     axes[0].set_title("Rozkład ocen jakości wina\n(Histogram: 10 przedziałów, po jednym na ocenę)", fontsize=12, fontweight='bold')
     axes[0].set_xlabel("Ocena jakości (0–10)", fontsize=11, fontweight='bold')
     axes[0].set_ylabel("Liczba próbek", fontsize=11, fontweight='bold')
     axes[0].grid(True, alpha=0.3, axis='y')
     
-    # Dodano etykiety liczbowe na słupkach
+    # Add count labels on the bars
     counts, bins, patches = axes[0].hist(wine_data["quality"], bins=10, edgecolor="black", color="steelblue", alpha=0.8)
     for i, (count, patch) in enumerate(zip(counts, patches)):
         if count > 0:
             axes[0].text(patch.get_x() + patch.get_width()/2, patch.get_height() + 50, 
                         int(count), ha='center', va='bottom', fontsize=9, fontweight='bold')
 
-    # Prawy: Wykres słupkowy klas binarnych
+    # Right: bar chart of the binary classes
     class_counts = wine_data["quality_binary"].value_counts().sort_index()
     bars = axes[1].bar(
         [0, 1],
@@ -144,7 +146,7 @@ if red_wine is not None and white_wine is not None:
     axes[1].set_title("Rozkład klasyfikacji binarnej\n(Wykres słupkowy: 2 klasy)", fontsize=12, fontweight='bold')
     axes[1].grid(True, alpha=0.3, axis='y')
     
-    # Dodano etykiety liczbowe na słupkach
+    # Add count labels on the bars
     for i, bar in enumerate(bars):
         height = bar.get_height()
         axes[1].text(bar.get_x() + bar.get_width()/2, height + 50,
@@ -154,14 +156,14 @@ if red_wine is not None and white_wine is not None:
     plt.suptitle("Zbiór danych Wine Quality – Analiza zmiennej docelowej", fontsize=14, fontweight='bold', y=0.98)
     save_plot(fig, "wine_class_distribution.png")
 
-    # --- (2) Macierz korelacji ---
+    # --- (2) Correlation matrix ---
     fig, ax = plt.subplots(figsize=(12, 10))
     corr = wine_data.drop(columns=["quality", "quality_binary"], errors="ignore").corr()
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax)
     ax.set_title("Wine Quality – Macierz korelacji cech")
     save_plot(fig, "wine_correlation.png")
 
-    # --- (3) Rozkłady cech ---
+    # --- (3) Feature distributions ---
     features = [
         "fixed acidity", "volatile acidity", "citric acid", "residual sugar",
         "chlorides", "free sulfur dioxide", "total sulfur dioxide", "density",
@@ -178,7 +180,7 @@ if red_wine is not None and white_wine is not None:
     fig.suptitle("Wine Quality – Rozkłady cech", fontsize=16)
     save_plot(fig, "wine_feature_distributions.png")
 
-    # --- (4) Pairplot (kluczowe cechy) ---
+    # --- (4) Pairplot (key features) ---
     key_features = ["alcohol", "volatile acidity", "sulphates", "citric acid", "quality_binary"]
     pairplot_data = wine_data[key_features].sample(min(1000, len(wine_data)), random_state=42)
     sns.pairplot(
@@ -194,37 +196,37 @@ if red_wine is not None and white_wine is not None:
     plt.close()
     print("✓ Zapisano: results/wine_pairplot.png")
 else:
-    print("Nie udało się wczytać danych Wine Quality.")
+    print("Failed to load Wine Quality data.")
 
 # ---------------------------------------------------------------
-# EKSPLORACJA DANYCH — CONCRETE STRENGTH
+# DATA EXPLORATION - CONCRETE STRENGTH
 # ---------------------------------------------------------------
 print("\n" + "=" * 60)
-print("EKSPLORACJA DANYCH - CONCRETE STRENGTH")
+print("DATA EXPLORATION - CONCRETE STRENGTH")
 print("=" * 60)
 
 concrete = safe_read_csv(["data/concrete-strength/Concrete_Data.csv"])
 
 if concrete is not None:
     target_name = concrete.columns[-1]
-    print(f"Liczba próbek: {len(concrete)}")
-    print(f"Liczba cech: {concrete.shape[1] - 1}")
-    print(f"Średnia wytrzymałość: {concrete[target_name].mean():.2f} MPa")
+    print(f"Samples: {len(concrete)}")
+    print(f"Features: {concrete.shape[1] - 1}")
+    print(f"Mean strength: {concrete[target_name].mean():.2f} MPa")
 
-    # --- (1) Rozkład zmiennej docelowej (wytrzymałość betonu) ---
-    # Przyjęto binarną klasyfikację: wysoka wytrzymałość > mediana
+    # --- (1) Target variable distribution (concrete strength) ---
+    # Binary classification is used: high strength > median
     median_strength = concrete[target_name].median()
     concrete["strength_binary"] = (concrete[target_name] > median_strength).astype(int)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
-    # Histogram oryginalnych wartości wytrzymałości
+    # Histogram of the original strength values
     axes[0].hist(concrete[target_name], bins=30, edgecolor="black", color="coral")
     axes[0].set_title("Rozkład wytrzymałości betonu na ścieiskanie")
     axes[0].set_xlabel("Wytrzymałość na ścieiskanie (MPa)")
     axes[0].set_ylabel("Liczba próbek")
 
-    # Wykres słupkowy rozkładu binarnego
+    # Bar chart of the binary distribution
     counts = concrete["strength_binary"].value_counts().sort_index()
     axes[1].bar(
         [0, 1],
@@ -239,15 +241,15 @@ if concrete is not None:
         ax.grid(True, alpha=0.3)
     save_plot(fig, "concrete_target_distribution.png")
 
-    # --- (2) Macierz korelacji ---
+    # --- (2) Correlation matrix ---
     fig, ax = plt.subplots(figsize=(10, 8))
     corr = concrete.corr()
     sns.heatmap(corr, annot=True, fmt=".2f", cmap="YlOrRd", center=0, ax=ax)
     ax.set_title("Concrete Strength – Macierz korelacji cech")
     save_plot(fig, "concrete_correlation.png")
 
-    # --- (3) Rozkłady cech ---
-    features = concrete.columns[:-1].tolist()  # wszystkie cechy oprócz zmiennej docelowej
+    # --- (3) Feature distributions ---
+    features = concrete.columns[:-1].tolist()  # all features except the target variable
     n_features = len(features)
     n_rows = (n_features + 3) // 4  # 4 kolumny
     fig, axes = plt.subplots(n_rows, 4, figsize=(18, 4 * n_rows))
@@ -261,11 +263,11 @@ if concrete is not None:
     fig.suptitle("Concrete Strength – Rozkłady cech", fontsize=16)
     save_plot(fig, "concrete_feature_distributions.png")
 
-    # --- (4) Pairplot (kluczowe cechy) – z pełną kontrolą nad etykietami i kolorami ---
-    # Wybrano kluczowe cechy: pierwsze trzy składniki + zmienna docelowa
+    # --- (4) Pairplot (key features) - with full control over labels and colors ---
+    # Key features selected: the first three components + the target variable
     key_features = [features[0], features[1], features[2], target_name]
 
-    # Skrócono nazwy cech dla poprawy czytelności
+    # Shorten feature names for readability
     short_names = {
         "cement (component 1)(kg in a m^3 mixture)": "Cement",
         "blast furnace slag (component 2)(kg in a m^3 mixture)": "Blast Slag",
@@ -298,17 +300,14 @@ if concrete is not None:
             else:
                 ax.set_xlabel("")
 
-    # Dodano tytuł
     g.fig.suptitle("Concrete Strength – Pairplot kluczowych cech", y=1.01, fontsize=16)
 
-    # Zoptymalizowano marginesy i odstępy
     plt.subplots_adjust(left=0.1, right=0.95, top=0.9, bottom=0.1, hspace=0.3, wspace=0.3)
 
-    # Wykres został zapisany
     plt.savefig("results/concrete_pairplot.png", dpi=300, bbox_inches="tight")
     plt.close()
     print("✓ Zapisano: results/concrete_pairplot.png")
 else:
-    print("Brak pliku Concrete_Data.csv — pominięto analizę Concrete.")
+    print("Missing Concrete_Data.csv, Concrete analysis skipped.")
 
-print("\nEksploracja danych zakończona pomyślnie!")
+print("\nData exploration finished successfully!")

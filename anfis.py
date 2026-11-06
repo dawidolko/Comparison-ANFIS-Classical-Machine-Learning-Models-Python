@@ -1,13 +1,14 @@
 """
-ANFIS (Takagi–Sugeno–Kang, typ-1)
-Uogólniony model dla klasyfikacji (sigmoid output) i regresji (linear output).
+ANFIS (Takagi-Sugeno-Kang, type-1)
+Generalized model for classification (sigmoid output) and regression
+(linear output).
 
-Warstwy:
-1. FuzzyLayer     — Gaussowskie funkcje przynależności μ(x)
-2. RuleLayer      — T-norma (AND) przez iloczyn → kombinacje reguł
-3. NormLayer      — Normalizacja wag reguł
-4. DefuzzLayer    — TSK-1: y_i = x·W_i + b_i
-5. SummationLayer — Agregacja po regułach
+Layers:
+1. FuzzyLayer     - Gaussian membership functions mu(x)
+2. RuleLayer      - T-norm (AND) via product -> rule combinations
+3. NormLayer      - Normalization of rule weights
+4. DefuzzLayer    - TSK-1: y_i = x * W_i + b_i
+5. SummationLayer - Aggregation over rules
 """
 
 import tensorflow as tf
@@ -16,25 +17,27 @@ import numpy as np
 
 class ANFISModel:
     """
-    Klasa modelu ANFIS (TSK-1) z możliwością użycia w klasyfikacji lub regresji.
+    ANFIS model class (TSK-1), usable for classification or regression.
     """
 
     def __init__(self, n_input: int, n_memb: int, batch_size: int = 32, regression: bool = False):
         """
-        Inicjalizuje model ANFIS z określoną liczbą wejść i funkcji przynależności.
-        
+        Initialize the ANFIS model with the given number of inputs and membership
+        functions.
+
         Args:
-            n_input: liczba cech wejściowych
-            n_memb: liczba funkcji przynależności na cechę
-            batch_size: rozmiar batcha dla predykcji
-            regression: True dla regresji (aktywacja liniowa), False dla klasyfikacji (sigmoid)
+            n_input: number of input features
+            n_memb: number of membership functions per feature
+            batch_size: batch size for prediction
+            regression: True for regression (linear activation), False for
+                classification (sigmoid)
         """
         self.n = int(n_input)
         self.m = int(n_memb)
         self.batch_size = int(batch_size)
         self.regression = bool(regression)
 
-        # --- Warstwy modelu ---
+        # --- Model layers ---
         x_in = tf.keras.layers.Input(shape=(self.n,), name="inputLayer")
 
         mu = FuzzyLayer(self.n, self.m, name="fuzzy_layer")(x_in)          # (B, m, n)
@@ -43,7 +46,7 @@ class ANFISModel:
         per_rule = DefuzzLayer(self.n, self.m, name="defuzzy_layer")(w_norm, x_in)  # (B, R)
         y_lin = SummationLayer(name="sumLayer")(per_rule)                  # (B, 1)
 
-        # --- Wyjście ---
+        # --- Output ---
         if regression:
             out = tf.keras.layers.Activation("linear", name="output")(y_lin)
             model_name = "ANFIS_Concrete"
@@ -54,31 +57,31 @@ class ANFISModel:
         self.model = tf.keras.Model(inputs=[x_in], outputs=[out], name=model_name)
         self.update_weights()
 
-    # --- Interfejs wysokiego poziomu ---
+    # --- High-level interface ---
 
     def __call__(self, X):
         """
-        Wykonuje predykcję dla danych wejściowych X.
-        
+        Run prediction on the input data X.
+
         Args:
-            X: macierz cech (n_samples, n_features)
-            
+            X: feature matrix (n_samples, n_features)
+
         Returns:
-            Tablica predykcji (n_samples, 1)
+            Array of predictions (n_samples, 1)
         """
         return self.model.predict(X, batch_size=self.batch_size, verbose=0)
 
     def fit(self, X, y, **kwargs):
         """
-        Trenuje model ANFIS na danych treningowych.
-        
+        Train the ANFIS model on the training data.
+
         Args:
-            X: macierz cech treningowych
-            y: wektor etykiet
-            **kwargs: dodatkowe argumenty przekazywane do model.fit()
-            
+            X: training feature matrix
+            y: label vector
+            **kwargs: extra arguments passed to model.fit()
+
         Returns:
-            Historia treningu (History object)
+            Training history (History object)
         """
         hist = self.model.fit(X, y, **kwargs)
         self.update_weights()
@@ -86,10 +89,10 @@ class ANFISModel:
 
     def update_weights(self):
         """
-        Aktualizuje lokalne kopie wag z warstw Keras.
-        
-        Pobiera parametry z warstw fuzzy_layer (centra i sigmy) 
-        oraz defuzzy_layer (wagi konsekwentne i bias).
+        Update the local copies of the weights from the Keras layers.
+
+        Reads the parameters from fuzzy_layer (centers and sigmas)
+        and defuzzy_layer (consequent weights and bias).
         """
         fz = self.model.get_layer("fuzzy_layer")
         self.cs, self.sigmas = fz.get_weights()
@@ -99,18 +102,19 @@ class ANFISModel:
 
     def get_membership_functions(self):
         """
-        Zwraca parametry gaussowskich funkcji przynależności.
-        
+        Return the Gaussian membership function parameters.
+
         Returns:
-            Tuple (centra, sigmy) - oba jako tablice numpy shape (n_memb, n_features)
+            Tuple (centers, sigmas) - both numpy arrays of shape
+            (n_memb, n_features)
         """
         return self.cs, self.sigmas
 
-    # --- Eksport reguł ---
+    # --- Rule export ---
 
     def to_rules_json(self):
         """
-        Generuje listę reguł w formacie kompatybilnym z extract_and_save_rules().
+        Generate a rule list in a format compatible with extract_and_save_rules().
         """
         n_features = self.n
         n_memb = self.m
@@ -140,15 +144,15 @@ class ANFISModel:
     @staticmethod
     def _rule_index_to_tuple(idx: int, n_features: int, n_memb: int):
         """
-        Konwertuje płaski indeks reguły na kombinację indeksów funkcji przynależności.
-        
+        Convert a flat rule index into a combination of membership function indices.
+
         Args:
-            idx: indeks reguły (0 do n_memb^n_features - 1)
-            n_features: liczba cech
-            n_memb: liczba funkcji przynależności na cechę
-            
+            idx: rule index (0 to n_memb^n_features - 1)
+            n_features: number of features
+            n_memb: number of membership functions per feature
+
         Returns:
-            Lista indeksów MF dla każdej cechy
+            List of MF indices, one for each feature
         """
         combo = []
         for _ in range(n_features):
@@ -163,10 +167,11 @@ class ANFISModel:
 
 class FuzzyLayer(tf.keras.layers.Layer):
     """
-    Warstwa fuzzyfikacji z gaussowskimi funkcjami przynależności.
-    
-    Dla każdej cechy wejściowej tworzy n_memb funkcji gaussowskich.
-    Zwraca tensor kształtu (batch_size, n_memb, n_input) z wartościami przynależności.
+    Fuzzification layer with Gaussian membership functions.
+
+    Creates n_memb Gaussian functions for each input feature.
+    Returns a tensor of shape (batch_size, n_memb, n_input) with membership
+    values.
     """
     def __init__(self, n_input, n_memb, **kwargs):
         super().__init__(**kwargs)
@@ -194,15 +199,16 @@ class FuzzyLayer(tf.keras.layers.Layer):
         sigma_eff = tf.maximum(self.sigma, self.eps)        # (m, n)
         z = (x - self.c[None, :, :]) / (sigma_eff[None, :, :] + self.eps)
         mu = tf.exp(-0.5 * tf.square(z))                    # (B, m, n)
-        return tf.clip_by_value(mu, 1e-8, 1.0)              # clamp 0–1 (stabilność)
+        return tf.clip_by_value(mu, 1e-8, 1.0)              # clamp 0-1 (stability)
 
 
 class RuleLayer(tf.keras.layers.Layer):
     """
-    Warstwa obliczająca siłę aktywacji wszystkich reguł poprzez iloczyn (T-norma).
-    
-    Tworzy wszystkie możliwe kombinacje funkcji przynależności.
-    Zwraca tensor kształtu (batch_size, n_memb^n_input) reprezentujący siłę każdej reguły.
+    Layer computing the firing strength of all rules via product (T-norm).
+
+    Creates all possible combinations of membership functions.
+    Returns a tensor of shape (batch_size, n_memb^n_input) holding the strength
+    of each rule.
     """
     def __init__(self, n_input, n_memb, **kwargs):
         super().__init__(**kwargs)
@@ -221,10 +227,10 @@ class RuleLayer(tf.keras.layers.Layer):
 
 class NormLayer(tf.keras.layers.Layer):
     """
-    Warstwa normalizująca siły aktywacji reguł.
-    
-    Każda siła reguły jest dzielona przez sumę wszystkich sił,
-    co zapewnia że suma znormalizowanych wag wynosi 1.
+    Layer normalizing the rule firing strengths.
+
+    Each rule strength is divided by the sum of all strengths,
+    so the normalized weights sum to 1.
     """
     def call(self, w):
         s = tf.reduce_sum(w, axis=1, keepdims=True)
@@ -233,10 +239,10 @@ class NormLayer(tf.keras.layers.Layer):
 
 class DefuzzLayer(tf.keras.layers.Layer):
     """
-    Warstwa defuzzyfikacji zgodnie z modelem Takagi-Sugeno-Kang pierwszego rzędu.
-    
-    Dla każdej reguły oblicza konsekwent liniowy: f_i(x) = x·W_i + b_i,
-    a następnie mnoży przez znormalizowaną siłę aktywacji reguły.
+    Defuzzification layer following the first-order Takagi-Sugeno-Kang model.
+
+    For each rule computes the linear consequent: f_i(x) = x * W_i + b_i,
+    then multiplies it by the normalized rule firing strength.
     """
     def __init__(self, n_input, n_memb, **kwargs):
         super().__init__(**kwargs)
@@ -264,9 +270,9 @@ class DefuzzLayer(tf.keras.layers.Layer):
 
 class SummationLayer(tf.keras.layers.Layer):
     """
-    Warstwa agregacji końcowej - sumuje wyniki wszystkich reguł.
-    
-    Wyjście modelu jest sumą ważonych konsekwentów ze wszystkich aktywnych reguł.
+    Final aggregation layer - sums the outputs of all rules.
+
+    The model output is the sum of the weighted consequents of all active rules.
     """
     def call(self, per_rule):
         return tf.reduce_sum(per_rule, axis=1, keepdims=True)

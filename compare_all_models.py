@@ -1,15 +1,15 @@
 """
-Generuje wykresy porównawcze modeli dla OBU problemów:
+Generate model comparison plots for BOTH problems:
 - Wine Quality (dataset 'all')
 - Concrete Strength
 
-Zapisuje je jako:
+Saves them as:
   - results/model_comparison_bar_wine.png
   - results/overfitting_analysis_wine.png
   - results/model_comparison_bar_concrete.png
   - results/overfitting_analysis_concrete.png
 
-Uruchamianie:
+Usage:
     python3 compare_all_models.py
 """
 
@@ -22,18 +22,18 @@ import numpy as np
 import seaborn as sns
 
 # ---------------------------------------------------------------------
-# FUNKCJE POMOCNICZE
+# HELPER FUNCTIONS
 # ---------------------------------------------------------------------
 def load_wine_results():
     """
-    Wczytuje wyniki wszystkich modeli dla Wine Quality (dataset 'all').
-    
-    Obsługuje:
-    - 2 warianty ANFIS (2 i 3 funkcje przynależności)
-    - 3 modele klasyczne (NN, SVM, Random Forest)
-    
+    Load the results of all models for Wine Quality (dataset 'all').
+
+    Supports:
+    - 2 ANFIS variants (2 and 3 membership functions)
+    - 3 classical models (NN, SVM, Random Forest)
+
     Returns:
-        Dict[nazwa_modelu, wyniki_json]
+        Dict[model_name, json_results]
     """
     paths = {
         "ANFIS (2 MF)": "results/anfis_all_2memb_results.json",
@@ -52,26 +52,26 @@ def load_wine_results():
                         if "test_accuracy" in data:
                             results[name] = data
                         else:
-                            print(f"Plik {path} nie zawiera 'test_accuracy' — pomijam dla Wine.")
+                            print(f"Plik {path} has no 'test_accuracy', skipping for Wine.")
                     else:
                         results[name] = data
             except Exception as e:
-                print(f"Błąd wczytywania {path}: {e}")
+                print(f"Error loading {path}: {e}")
         else:
-            print(f"Brak pliku: {path}")
+            print(f"Missing file: {path}")
     return results
 
 
 def load_concrete_results():
     """
-    Wczytuje wyniki wszystkich modeli dla Concrete Strength.
-    
-    Obsługuje:
-    - 2 warianty ANFIS (2 i 3 funkcje przynależności)
-    - 3 modele klasyczne (NN, SVM, Random Forest)
-    
+    Load the results of all models for Concrete Strength.
+
+    Supports:
+    - 2 ANFIS variants (2 and 3 membership functions)
+    - 3 classical models (NN, SVM, Random Forest)
+
     Returns:
-        Dict[nazwa_modelu, wyniki_json]
+        Dict[model_name, json_results]
     """
     paths = {
         "ANFIS (2 MF)": "results/anfis_concrete_2memb_results.json",
@@ -90,19 +90,19 @@ def load_concrete_results():
                         if "test_mae" in data:
                             results[name] = data
                         else:
-                            print(f"Plik {path} nie zawiera 'test_mae' — pomijam dla Concrete.")
+                            print(f"Plik {path} has no 'test_mae', skipping for Concrete.")
                     else:
                         results[name] = data
             except Exception as e:
-                print(f"Błąd wczytywania {path}: {e}")
+                print(f"Error loading {path}: {e}")
         else:
-            print(f"Brak pliku: {path}")
+            print(f"Missing file: {path}")
     return results
 
 
 def plot_comparison_bar_chart(results, is_regression, output_path, title_suffix):
     if not results:
-        print(f"Pomijam generowanie {output_path} — brak wyników.")
+        print(f"Skipping {output_path}: no results.")
         return
 
     models = list(results.keys())
@@ -153,7 +153,7 @@ def plot_comparison_bar_chart(results, is_regression, output_path, title_suffix)
 
 def plot_overfitting_analysis(results, is_regression, output_path):
     if not results:
-        print(f"⚠️ Pomijam generowanie {output_path} — brak wyników.")
+        print(f"⚠️ Skipping {output_path}: no results.")
         return
 
     models = list(results.keys())
@@ -193,7 +193,7 @@ def plot_overfitting_analysis(results, is_regression, output_path):
     ax.set_title("Analiza Overfittingu (mniejsza różnica = lepiej)", fontsize=15, fontweight="bold", pad=15)
     ax.grid(axis="x", alpha=0.3, linestyle="--")
 
-    # Ustaw granice osi X, aby obejmowały wszystkie wartości
+    # Set the X axis limits to cover all values
     min_val = min([x for x in overfit_gap if not np.isnan(x)] + [0])
     max_val = max([x for x in overfit_gap if not np.isnan(x)] + [0])
     ax.set_xlim(left=min_val - 0.5, right=max_val + 0.5)
@@ -211,7 +211,7 @@ def plot_overfitting_analysis(results, is_regression, output_path):
 
 
 # ---------------------------------------------------------------------
-# GŁÓWNY BLOK — generuje wszystko automatycznie
+# MAIN BLOCK - generates everything automatically
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
     print("======================================")
@@ -219,7 +219,7 @@ if __name__ == "__main__":
     print("======================================")
 
     # --- Wine Quality (all) ---
-    print("\n🍷 Ładuję wyniki dla Wine Quality (dataset 'all')...")
+    print("\n🍷 Loading results for Wine Quality (dataset 'all')...")
     wine_results = load_wine_results()
     if wine_results:
         plot_comparison_bar_chart(wine_results, is_regression=False,
@@ -228,10 +228,10 @@ if __name__ == "__main__":
         plot_overfitting_analysis(wine_results, is_regression=False,
                                   output_path="results/overfitting_analysis_wine.png")
     else:
-        print("Pomijam Wine — brak wyników.")
+        print("Skipping Wine: no results.")
 
     # --- Concrete Strength ---
-    print("\n🏗️ Ładuję wyniki dla Concrete Strength...")
+    print("\n🏗️ Loading results for Concrete Strength...")
     concrete_results = load_concrete_results()
     if concrete_results:
         plot_comparison_bar_chart(concrete_results, is_regression=True,
@@ -240,6 +240,6 @@ if __name__ == "__main__":
         plot_overfitting_analysis(concrete_results, is_regression=True,
                                   output_path="results/overfitting_analysis_concrete.png")
     else:
-        print("Pomijam Concrete — brak wyników.")
+        print("Skipping Concrete: no results.")
 
-    print("\nPorównanie modeli zakończone!")
+    print("\nModel comparison finished!")

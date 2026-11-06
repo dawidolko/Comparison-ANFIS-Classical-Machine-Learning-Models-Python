@@ -1,11 +1,11 @@
 """
 TRAIN COMPARISON MODELS (Wine & Concrete)
 -----------------------------------------
-Trenuje trzy klasyczne modele ML dla OBU problemów:
-- Wine Quality (klasyfikacja binarna)
-- Concrete Strength (regresja)
+Trains three classical ML models for BOTH problems:
+- Wine Quality (binary classification)
+- Concrete Strength (regression)
 
-Zapisuje wyniki w osobnych plikach:
+Saves the results in separate files:
   - nn_wine_results.json, nn_concrete_results.json
   - svm_wine_results.json, svm_concrete_results.json
   - rf_wine_results.json, rf_concrete_results.json
@@ -47,41 +47,41 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # ------------------------------------------------------
 def now_suffix():
     """
-    Generuje znacznik czasowy w formacie YYYYMMDD-HHMMSS.
-    
+    Generate a timestamp in the format YYYYMMDD-HHMMSS.
+
     Returns:
-        String z aktualną datą i czasem
+        String with the current date and time
     """
     return time.strftime("%Y%m%d-%H%M%S")
 
 def ensure_column_vector(y, for_classification=False):
     """
-    Konwertuje etykiety do odpowiedniego kształtu dla klasyfikacji lub regresji.
-    
+    Convert labels to the right shape for classification or regression.
+
     Args:
-        y: wektor etykiet
-        for_classification: True = zwraca (n, 1), False = zwraca (n,)
-        
+        y: label vector
+        for_classification: True = returns (n, 1), False = returns (n,)
+
     Returns:
-        Przekształcona tablica numpy
+        Reshaped numpy array
     """
     y = np.asarray(y)
     if for_classification:
         return y.reshape(-1, 1) if y.ndim == 1 else y
-    return y.ravel()  # Regresja: wektor 1D
+    return y.ravel()  # Regression: 1D vector
 
 def class_weight_from_labels(y):
     """
-    Oblicza wagi klas dla niezbalansowanych zestawów danych.
-    
-    Używane do class_weight w modelach klasyfikacyjnych.
-    Zwiększa wagę klasy mniejszościowej.
-    
+    Compute class weights for imbalanced datasets.
+
+    Used for class_weight in classification models.
+    Increases the weight of the minority class.
+
     Args:
-        y: etykiety binarne (0/1)
-        
+        y: binary labels (0/1)
+
     Returns:
-        Dict {0: waga_0, 1: waga_1} lub None jeśli brak próbek
+        Dict {0: weight_0, 1: weight_1}, or None if there are no samples
     """
     y = np.asarray(y).ravel()
     pos = np.sum(y == 1)
@@ -93,8 +93,8 @@ def class_weight_from_labels(y):
 
 def load_wine_data():
     """
-    Ładuje znormalizowane dane Wine Quality z plików .npy.
-    
+    Load the normalized Wine Quality data from .npy files.
+
     Returns:
         Tuple (X_train, y_train, X_test, y_test)
     """
@@ -109,8 +109,8 @@ def load_wine_data():
 
 def load_concrete_data():
     """
-    Ładuje znormalizowane dane Concrete Strength z plików .npy.
-    
+    Load the normalized Concrete Strength data from .npy files.
+
     Returns:
         Tuple (X_train, y_train, X_test, y_test)
     """
@@ -130,10 +130,10 @@ def save_json(obj, path):
 
 
 # ------------------------------------------------------
-# MODELE DLA WINE QUALITY (Klasyfikacja)
+# MODELS FOR WINE QUALITY (Classification)
 # ------------------------------------------------------
 def train_models_for_wine():
-    print("\n🍷 TRENING MODELI DLA WINE QUALITY")
+    print("\n🍷 TRAINING MODELS FOR WINE QUALITY")
     X_train, y_train, X_test, y_test = load_wine_data()
     y_train_r, y_test_r = y_train.ravel(), y_test.ravel()
 
@@ -208,15 +208,15 @@ def train_models_for_wine():
     pickle.dump(rf, open(os.path.join(MODELS_DIR, "rf_wine.pkl"), "wb"))
     save_json(results['rf'], os.path.join(RESULTS_DIR, "rf_wine_results.json"))
 
-    print("  ✅ Zakończono Wine")
+    print("  ✅ Finished Wine")
     return results
 
 
 # ------------------------------------------------------
-# MODELE DLA CONCRETE STRENGTH (Regresja)
+# MODELS FOR CONCRETE STRENGTH (Regression)
 # ------------------------------------------------------
 def train_models_for_concrete():
-    print("\n🏗️ TRENING MODELI DLA CONCRETE STRENGTH")
+    print("\n🏗️ TRAINING MODELS FOR CONCRETE STRENGTH")
     X_train, y_train, X_test, y_test = load_concrete_data()
 
     results = {}
@@ -275,25 +275,25 @@ def train_models_for_concrete():
     pickle.dump(rf, open(os.path.join(MODELS_DIR, "rf_concrete.pkl"), "wb"))
     save_json(results['rf'], os.path.join(RESULTS_DIR, "rf_concrete_results.json"))
 
-    print("  ✅ Zakończono Concrete")
+    print("  ✅ Finished Concrete")
     return results
 
 
 # ------------------------------------------------------
-# GŁÓWNY BLOK
+# MAIN BLOCK
 # ------------------------------------------------------
 if __name__ == "__main__":
-    print("TRENING KLASYCZNYCH MODELI ML")
+    print("TRAINING CLASSICAL ML MODELS")
     print("=================================")
 
     try:
         wine_results = train_models_for_wine()
     except Exception as e:
-        print(f"Błąd podczas trenowania Wine: {e}")
+        print(f"Error training Wine: {e}")
 
     try:
         concrete_results = train_models_for_concrete()
     except Exception as e:
-        print(f"Błąd podczas trenowania Concrete: {e}")
+        print(f"Error training Concrete: {e}")
 
-    print("\nWszystkie modele zostały wytrenowane i zapisane w 'results/' oraz 'models/'.")
+    print("\nAll models trained and saved in 'results/' and 'models/'.")

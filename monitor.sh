@@ -1,42 +1,42 @@
 #!/bin/bash
-# Monitor postępu pipeline'u i Streamlit
+# Monitor pipeline and Streamlit progress
 
-echo "🔍 MONITOR POSTĘPU PROJEKTU"
+echo "🔍 PROJECT PROGRESS MONITOR"
 echo "============================================================"
 echo ""
 
 while true; do
     clear
-    echo "🔍 MONITOR POSTĘPU - $(date '+%H:%M:%S')"
+    echo "🔍 PROGRESS MONITOR - $(date '+%H:%M:%S')"
     echo "============================================================"
     echo ""
     
-    # Sprawdź czy proces setup.sh działa
+    # Check whether the setup.sh process is running
     if pgrep -f "setup.sh" > /dev/null; then
-        echo "✅ Pipeline działa..."
+        echo "✅ Pipeline is running..."
         echo ""
         
-        # Pokaż ostatnie 30 linii logu
-        echo "📊 AKTUALNY POSTĘP:"
+        # Show the last 30 log lines
+        echo "📊 CURRENT PROGRESS:"
         echo "------------------------------------------------------------"
         tail -30 setup_full.log | grep -E "(KROK|Epoch|Postęp|Train Accuracy|Test Accuracy|URUCHAMIANIE|✓|Trening)" || tail -30 setup_full.log
         echo "------------------------------------------------------------"
         
     elif pgrep -f "streamlit" > /dev/null; then
-        echo "🎉 STREAMLIT URUCHOMIONY!"
+        echo "🎉 STREAMLIT RUNNING!"
         echo ""
-        echo "🌐 Aplikacja dostępna pod adresem:"
+        echo "🌐 Application available at:"
         echo "   👉 http://localhost:8501"
         echo ""
-        echo "✅ Pipeline zakończony pomyślnie!"
+        echo "✅ Pipeline finished successfully!"
         echo ""
-        echo "Naciśnij Ctrl+C aby zakończyć monitorowanie"
+        echo "Press Ctrl+C to stop monitoring"
         echo ""
         break
     else
-        echo "⏸️  Pipeline zatrzymany lub zakończony"
+        echo "⏸️  Pipeline stopped or finished"
         echo ""
-        echo "📋 Ostatnie linie logu:"
+        echo "📋 Last log lines:"
         echo "------------------------------------------------------------"
         tail -20 setup_full.log
         echo "------------------------------------------------------------"
@@ -44,7 +44,7 @@ while true; do
     fi
     
     echo ""
-    echo "⏱️  Następna aktualizacja za 30 sekund..."
-    echo "   (Naciśnij Ctrl+C aby przerwać monitorowanie)"
+    echo "⏱️  Next update in 30 seconds..."
+    echo "   (Press Ctrl+C to stop monitoring)"
     sleep 30
 done

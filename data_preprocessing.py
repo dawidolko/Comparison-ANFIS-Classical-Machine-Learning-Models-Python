@@ -9,21 +9,21 @@ import json
 
 def load_and_preprocess_data():
     """
-    Ładuje i przetwarza dane Wine Quality (czerwone + białe wino).
-    
-    Tworzy trzy zestawy danych:
-    - 'all': połączone czerwone i białe wino
-    - 'red': tylko czerwone wino
-    - 'white': tylko białe wino
-    
-    Dla każdego zestawu:
-    - Binaryzuje jakość (quality > 5 = 1, inaczej 0)
-    - Normalizuje cechy (StandardScaler)
-    - Dzieli na zbiór treningowy i testowy (80/20)
-    - Zapisuje jako pliki .npy i scaler jako .pkl
-    
+    Load and process the Wine Quality data (red + white wine).
+
+    Creates three datasets:
+    - 'all': combined red and white wine
+    - 'red': red wine only
+    - 'white': white wine only
+
+    For each dataset:
+    - Binarizes quality (quality > 5 = 1, otherwise 0)
+    - Normalizes features (StandardScaler)
+    - Splits into training and test sets (80/20)
+    - Saves them as .npy files and the scaler as .pkl
+
     Returns:
-        Dict ze statystykami każdego zestawu danych
+        Dict with statistics for each dataset
     """
     csv_red = 'data/wine-quality/winequality-red.csv' if os.path.exists('data/wine-quality/winequality-red.csv') else 'data/winequality-red.csv'
     csv_white = 'data/wine-quality/winequality-white.csv' if os.path.exists('data/wine-quality/winequality-white.csv') else 'data/winequality-white.csv'
@@ -93,23 +93,23 @@ def load_and_preprocess_data():
     with open('data/datasets_summary.json', 'w') as f:
         json.dump(datasets_info, f, indent=2)
     
-    print("\n✓ Dane dla all, red, white zapisane!")
+    print("\n✓ Data for all, red, white saved!")
     return datasets_info
 
 
 def load_and_preprocess_concrete():
     """
-    Ładuje i przetwarza dane Concrete Strength (wytrzymałość betonu).
-    
-    Proces:
-    - Wczytuje dane z CSV (8 cech + 1 cel: wytrzymałość w MPa)
-    - Normalizuje cechy (StandardScaler)
-    - Dzieli na treningowy/testowy (80/20)
-    - Zapisuje do data/concrete-strength/*.npy
-    - Zapisuje scaler do models/concrete-strength/scaler.pkl
-    
+    Load and process the Concrete Strength data.
+
+    Process:
+    - Reads data from CSV (8 features + 1 target: strength in MPa)
+    - Normalizes features (StandardScaler)
+    - Splits into training/test (80/20)
+    - Saves to data/concrete-strength/*.npy
+    - Saves the scaler to models/concrete-strength/scaler.pkl
+
     Returns:
-        Dict z informacjami o zestawie lub None jeśli brak pliku
+        Dict with dataset information, or None if the file is missing
     """
     csv_path = 'data/concrete-strength/Concrete_Data.csv'
     if not os.path.exists(csv_path):

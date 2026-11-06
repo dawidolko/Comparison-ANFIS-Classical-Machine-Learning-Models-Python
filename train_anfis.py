@@ -18,16 +18,16 @@ tf.random.set_seed(42)
 # -------------------------------------------------------------
 def _load_dataset(dataset: str):
     """
-    Ładuje znormalizowane dane treningowe i testowe dla określonego zestawu.
-    
+    Load the normalized training and test data for the given dataset.
+
     Args:
-        dataset: nazwa zestawu ('concrete', 'all', 'red', 'white')
-        
+        dataset: dataset name ('concrete', 'all', 'red', 'white')
+
     Returns:
-        Tuple (X_train, X_test, y_train, y_test) jako tablice numpy
-        
+        Tuple (X_train, X_test, y_train, y_test) as numpy arrays
+
     Raises:
-        ValueError: jeśli dataset nie istnieje
+        ValueError: if the dataset does not exist
     """
     base = "data"
     paths = {
@@ -42,61 +42,62 @@ def _load_dataset(dataset: str):
     }
 
     if dataset not in paths:
-        raise ValueError(f"Nieznany dataset: {dataset}")
+        raise ValueError(f"Unknown dataset: {dataset}")
     Xtr, Xte, ytr, yte = [np.load(p) for p in paths[dataset]]
     return Xtr, Xte, ytr, yte
 
 
 def _rules_count(n_features: int, n_memb: int) -> int:
     """
-    Oblicza całkowitą liczbę reguł rozmytych w modelu ANFIS.
-    
-    Liczba reguł = n_memb^n_features (wszystkie kombinacje funkcji przynależności)
-    
+    Compute the total number of fuzzy rules in the ANFIS model.
+
+    Number of rules = n_memb^n_features (all combinations of membership functions)
+
     Args:
-        n_features: liczba cech wejściowych
-        n_memb: liczba funkcji przynależności na każdą cechę
-        
+        n_features: number of input features
+        n_memb: number of membership functions per feature
+
     Returns:
-        Całkowita liczba reguł
+        Total number of rules
     """
     return int(n_memb ** n_features)
 
 
 # -------------------------------------------------------------
-# GŁÓWNY TRENING
+# MAIN TRAINING
 # -------------------------------------------------------------
 def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
     """
-    Trenuje pojedynczy model ANFIS dla określonego zestawu danych.
-    
-    Proces treningu:
-    1. Ładuje i przygotowuje dane
-    2. Tworzy model ANFIS z odpowiednią aktywacją (linear dla regresji, sigmoid dla klasyfikacji)
-    3. Kompiluje z odpowiednią funkcją straty i metryką
-    4. Trenuje z ModelCheckpoint i EarlyStopping
-    5. Generuje wykresy treningu i dopasowania
-    6. Ekstrahuje i zapisuje reguły
-    7. Zapisuje wyniki do JSON
-    
+    Train a single ANFIS model for the given dataset.
+
+    Training process:
+    1. Loads and prepares the data
+    2. Creates the ANFIS model with the right activation (linear for regression,
+       sigmoid for classification)
+    3. Compiles with the right loss function and metric
+    4. Trains with ModelCheckpoint and EarlyStopping
+    5. Generates training and fit plots
+    6. Extracts and saves the rules
+    7. Saves the results to JSON
+
     Args:
-        n_memb: liczba funkcji przynależności (2 lub 3)
-        epochs: maksymalna liczba epok treningu
-        batch_size: rozmiar batcha
-        dataset: nazwa zestawu ('concrete', 'all', 'red', 'white')
-        
+        n_memb: number of membership functions (2 or 3)
+        epochs: maximum number of training epochs
+        batch_size: batch size
+        dataset: dataset name ('concrete', 'all', 'red', 'white')
+
     Returns:
-        Tuple (test_metric, model) - metryka testowa i wytrenowany model
+        Tuple (test_metric, model) - test metric and the trained model
     """
     print(f"\n{'='*70}")
-    print(f"TRENING ANFIS: dataset={dataset}, n_memb={n_memb}")
+    print(f"TRAINING ANFIS: dataset={dataset}, n_memb={n_memb}")
     print(f"{'='*70}\n")
 
     X_train, X_test, y_train, y_test = _load_dataset(dataset)
     n_features = X_train.shape[1]
     n_rules = _rules_count(n_features, n_memb)
 
-    # dopasowanie batch_size (by uniknąć warningów TF)
+    # align to batch_size (to avoid TF warnings)
     n_train = (len(X_train) // batch_size) * batch_size
     n_test = (len(X_test) // batch_size) * batch_size
     X_train, y_train = X_train[:n_train], y_train[:n_train]
@@ -105,11 +106,11 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
     print(f"Features: {n_features}, MF: {n_memb}, Rules: {n_rules}")
     print(f"Train: {len(X_train)}, Test: {len(X_test)}")
 
-    # Dla regresji (concrete) ustawiono regression=True
+    # For regression (concrete) set regression=True
     is_regression = (dataset == "concrete")
     anfis_model = ANFISModel(n_input=n_features, n_memb=n_memb, batch_size=batch_size, regression=is_regression)
 
-    # --------------------- konfiguracja metryk ---------------------
+    # --------------------- metric configuration ---------------------
     if dataset == "concrete":
         anfis_model.model.compile(
             optimizer=tf.keras.optimizers.Nadam(learning_rate=0.001),
@@ -143,14 +144,14 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
         )
     ]
 
-    # ---------------------- PRZED TRENINGIEM - zapisz początkowe MF ----------------------
+    # ---------------------- BEFORE TRAINING - save the initial MFs ----------------------
     anfis_model.update_weights()
     centers_before, sigmas_before = anfis_model.get_membership_functions()
     np.save(f"results/mf_centers_before_{dataset}_{n_memb}memb.npy", centers_before)
     np.save(f"results/mf_sigmas_before_{dataset}_{n_memb}memb.npy", sigmas_before)
-    print(f"✓ Zapisano MF PRZED treningiem: results/mf_*_before_{dataset}_{n_memb}memb.npy")
+    print(f"✓ Saved MF BEFORE training: results/mf_*_before_{dataset}_{n_memb}memb.npy")
 
-    print("Rozpoczynam trening...\n")
+    print("Starting training...\n")
     history = anfis_model.model.fit(
         X_train, y_train,
         validation_data=(X_test, y_test),
@@ -158,12 +159,12 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
         callbacks=callbacks, verbose=1
     )
 
-    # ---------------------- PO TRENINGU - zapisz końcowe MF ----------------------
+    # ---------------------- AFTER TRAINING - save the final MFs ----------------------
     anfis_model.update_weights()
     centers_after, sigmas_after = anfis_model.get_membership_functions()
     np.save(f"results/mf_centers_after_{dataset}_{n_memb}memb.npy", centers_after)
     np.save(f"results/mf_sigmas_after_{dataset}_{n_memb}memb.npy", sigmas_after)
-    print(f"✓ Zapisano MF PO treningu: results/mf_*_after_{dataset}_{n_memb}memb.npy")
+    print(f"✓ Saved MF AFTER training: results/mf_*_after_{dataset}_{n_memb}memb.npy")
 
     # ---------------------- ewaluacja ----------------------
     anfis_model.model.load_weights(checkpoint_path)
@@ -199,11 +200,11 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
     plot_training_history(history, n_memb, dataset)
     plot_fit_on_train(anfis_model, X_train, y_train, n_memb, dataset)
 
-    # ---------------------- reguły ----------------------
+    # ---------------------- rules ----------------------
     try:
         extract_and_save_rules(anfis_model, n_memb, dataset, X_train)
     except Exception as e:
-        print(f"⚠️ Błąd przy ekstrakcji reguł: {e}")
+        print(f"⚠️ Rule extraction error: {e}")
 
     return anfis_model, history, results
 
@@ -213,17 +214,17 @@ def train_anfis_model(n_memb=2, epochs=20, batch_size=32, dataset="all"):
 # -------------------------------------------------------------
 def plot_training_history(history, n_memb, dataset):
     """
-    Wygeneruj wizualizację historii treningu modelu ANFIS — bez tabelki.
-    
-    Dla KLASYFIKACJI (wine): krzywe Accuracy i Loss.
-    Dla REGRESJI (concrete): krzywe MAE i Loss.
-    
+    Generate a visualization of the ANFIS training history - without a table.
+
+    For CLASSIFICATION (wine): Accuracy and Loss curves.
+    For REGRESSION (concrete): MAE and Loss curves.
+
     Args:
-        history: obiekt History z Keras (lub podobny słownik z metrykami)
-        n_memb: liczba funkcji przynależności
-        dataset: nazwa zbioru danych
+        history: Keras History object (or a similar dict of metrics)
+        n_memb: number of membership functions
+        dataset: dataset name
     """
-    # Ustal typ zadania i klucze metryk
+    # Determine the task type and metric keys
     if "accuracy" in history.history:
         mkey, vkey, label = "accuracy", "val_accuracy", "Accuracy"
         is_classification = True
@@ -231,16 +232,16 @@ def plot_training_history(history, n_memb, dataset):
         mkey, vkey, label = "mae", "val_mae", "MAE"
         is_classification = False
     else:
-        # Jeśli nie ma ani accuracy, ani mae — użycie loss jako metryki
+        # If there is neither accuracy nor mae, use loss as the metric
         mkey = None
         is_classification = False
 
-    # Tworzenie wykresów — 1 wiersz, 2 kolumny
+    # Create the plots - 1 row, 2 columns
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle(f"Historia treningu: {dataset.upper()} ({n_memb} funkcji przynależności)", 
                  fontsize=14, fontweight='bold', y=0.98)
 
-    # --- LEWY WYKRES: METRYKA (Accuracy / MAE) ---
+    # --- LEFT PLOT: METRIC (Accuracy / MAE) ---
     if mkey:
         epochs = np.arange(1, len(history.history[mkey]) + 1)
         
@@ -253,7 +254,7 @@ def plot_training_history(history, n_memb, dataset):
         ax0.legend(fontsize=10, loc='best')
         ax0.grid(True, alpha=0.3)
         
-        # Zaznaczenie najlepszej epoki
+        # Mark the best epoch
         best_epoch_idx = np.argmax(history.history[vkey]) if is_classification else np.argmin(history.history[vkey])
         best_value = history.history[vkey][best_epoch_idx]
         best_epoch_num = best_epoch_idx + 1
@@ -263,7 +264,7 @@ def plot_training_history(history, n_memb, dataset):
         ax0.legend(fontsize=10, loc='best')
 
     else:
-        # Jeśli nie ma metryki (np. tylko loss), pusty wykres lub informacja
+        # If there is no metric (e.g. only loss), an empty plot or a message
         ax0.text(0.5, 0.5, 'Brak metryki (accuracy/mae)', ha='center', va='center', 
                  transform=ax0.transAxes, fontsize=12, color='gray')
         ax0.set_title(f"{dataset} - {n_memb}MF", fontsize=13, fontweight='bold')
@@ -271,7 +272,7 @@ def plot_training_history(history, n_memb, dataset):
         ax0.set_ylabel("Metric")
         ax0.grid(True, alpha=0.3)
 
-    # --- PRAWY WYKRES: LOSS ---
+    # --- RIGHT PLOT: LOSS ---
     epochs = np.arange(1, len(history.history["loss"]) + 1)
     ax1.plot(epochs, history.history["loss"], label="Train", lw=2.5, marker='o', markersize=4, color='darkgreen')
     ax1.plot(epochs, history.history["val_loss"], label="Validation", lw=2.5, marker='s', markersize=4, color='darkred')
@@ -281,7 +282,7 @@ def plot_training_history(history, n_memb, dataset):
     ax1.legend(fontsize=10, loc='best')
     ax1.grid(True, alpha=0.3)
 
-    # Zaznaczenie najlepszej epoki dla loss
+    # Mark the best epoch for loss
     best_loss_epoch_idx = np.argmin(history.history["val_loss"])
     best_loss_value = history.history["val_loss"][best_loss_epoch_idx]
     best_loss_epoch_num = best_loss_epoch_idx + 1
@@ -293,22 +294,22 @@ def plot_training_history(history, n_memb, dataset):
     plt.tight_layout()
     plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_training.png", dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"✓ Zapisano results/anfis_{dataset}_{n_memb}memb_training.png")
+    print(f"✓ Saved results/anfis_{dataset}_{n_memb}memb_training.png")
 
 
 def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
     """
-    Wizualizuje dopasowanie modelu na zbiorze treningowym.
-    
-    Dla regresji: scatter plot + histogram reszt + R²
-    Dla klasyfikacji: macierz pomyłek + raport klasyfikacyjny
-    
+    Visualize the model fit on the training set.
+
+    For regression: scatter plot + residual histogram + R^2
+    For classification: confusion matrix + classification report
+
     Args:
-        model: wytrenowany model ANFIS
-        X_train: cechy treningowe
-        y_train: etykiety treningowe
-        n_memb: liczba funkcji przynależności
-        dataset: nazwa zestawu danych
+        model: trained ANFIS model
+        X_train: training features
+        y_train: training labels
+        n_memb: number of membership functions
+        dataset: dataset name
     """
     print(f"\n[DEBUG] plot_fit_on_train START - dataset={dataset}, n_memb={n_memb}")
     print(f"[DEBUG] y_train shape: {y_train.shape}, min: {y_train.min():.2f}, max: {y_train.max():.2f}")
@@ -324,7 +325,7 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
 
     # --- KLASYFIKACJA ---
     if dataset in ["all", "red", "white"]:  # Wine Quality → klasyfikacja
-        print("[INFO] Klasyfikacja - generuję macierz pomyłek")
+        print("[INFO] Classification: generating the confusion matrix")
         if len(np.unique(y_train)) <= 2:  # binarna
             preds_class = (preds > 0.5).astype(int)
         else:
@@ -332,10 +333,9 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
             unique_y = np.unique(y_train)
             unique_p = np.unique(preds_class)
             if not set(unique_p).issubset(set(unique_y)):
-                print(f"[WARNING] Predykcje zawierają klasy poza zakresem: {unique_p} vs {unique_y}")
+                print(f"[WARNING] Predictions contain out-of-range classes: {unique_p} vs {unique_y}")
                 preds_class = np.clip(preds_class, unique_y.min(), unique_y.max())
 
-        # Macierz pomyłek
         cm = confusion_matrix(y_train, preds_class)
         fig, ax = plt.subplots(1, 1, figsize=(8, 6))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
@@ -347,22 +347,19 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
         plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_confmat_train.png", dpi=300, bbox_inches="tight")
         plt.close()
 
-        # Raport klasyfikacyjny
         report = classification_report(y_train, preds_class, output_dict=True)
         print("\n[CLASSIFICATION REPORT]")
         print(classification_report(y_train, preds_class))
 
-        # Zapisanie raport do pliku
         with open(f"results/anfis_{dataset}_{n_memb}memb_class_report_train.txt", "w") as f:
             f.write(classification_report(y_train, preds_class))
 
-        print(f"✓ Zapisano macierz pomyłek i raport")
+        print(f"✓ Saved confusion matrix and report")
 
     # --- REGRESJA ---
     else:
-        print("[INFO] Regresja - generuję wykresy diagnostyczne")
+        print("[INFO] Regression: generating diagnostic plots")
         
-        # Obliczenie reszty
         residuals = y_train - preds
         
         # R²
@@ -372,7 +369,7 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
         fig.suptitle(f"{dataset} - {n_memb}MF | Diagnostyka modelu", fontsize=16)
 
-        # 1. Scatter: rzeczywiste vs predykcje
+        # 1. Scatter: actual vs predicted
         ax = axes[0, 0]
         ax.scatter(y_train, preds, s=20, alpha=0.6, color='blue')
         min_val = min(y_train.min(), preds.min())
@@ -394,7 +391,7 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
         ax.legend()
         ax.grid(True, alpha=0.3)
 
-        # 3. Reszty vs Predykcje (sprawdzenie heteroskedastyczności)
+        # 3. Residuals vs predictions (heteroscedasticity check)
         ax = axes[1, 0]
         ax.scatter(preds, residuals, s=20, alpha=0.6, color='purple')
         ax.axhline(0, color='red', linestyle='--', linewidth=2)
@@ -414,23 +411,23 @@ def plot_fit_on_train(model, X_train, y_train, n_memb, dataset):
         plt.savefig(f"results/anfis_{dataset}_{n_memb}memb_diag_train.png", dpi=300, bbox_inches="tight")
         plt.close()
 
-        print(f"✓ Zapisano wykresy diagnostyczne: results/anfis_{dataset}_{n_memb}memb_diag_train.png")
+        print(f"✓ Saved diagnostic plots: results/anfis_{dataset}_{n_memb}memb_diag_train.png")
 
 
 # -------------------------------------------------------------
-# EKSTRAKCJA REGUŁ
+# RULE EXTRACTION
 # -------------------------------------------------------------
 def _rule_index_to_tuple(idx: int, n_features: int, n_memb: int):
     """
-    Konwertuje płaski indeks reguły na wektor indeksów funkcji przynależności.
-    
+    Convert a flat rule index into a vector of membership function indices.
+
     Args:
-        idx: indeks reguły (0 do n_memb^n_features - 1)
-        n_features: liczba cech
-        n_memb: liczba funkcji przynależności na cechę
-        
+        idx: rule index (0 to n_memb^n_features - 1)
+        n_features: number of features
+        n_memb: number of membership functions per feature
+
     Returns:
-        Lista indeksów MF dla każdej cechy
+        List of MF indices, one for each feature
     """
     combo = []
     for _ in range(n_features):
@@ -441,22 +438,22 @@ def _rule_index_to_tuple(idx: int, n_features: int, n_memb: int):
 
 def extract_and_save_rules(model, n_memb: int, dataset: str, X_train):
     """
-    Ekstrahuje reguły rozmyte z wytrenowanego modelu ANFIS i zapisuje do JSON.
-    
-    Jeśli liczba reguł > 4096, wybiera 100 najczęściej aktywowanych reguł
-    na podstawie analizy danych treningowych.
-    
-    Zapisywane informacje:
-    - Indeksy funkcji przynależności dla każdej reguły
-    - Parametry konsekwentów (wagi i bias)
-    - Centra i sigmy funkcji przynależności
-    - Częstość aktywacji (dla dużych modeli)
-    
+    Extract fuzzy rules from the trained ANFIS model and save them to JSON.
+
+    If the number of rules > 4096, selects the 100 most frequently activated
+    rules based on an analysis of the training data.
+
+    Saved information:
+    - Membership function indices for each rule
+    - Consequent parameters (weights and bias)
+    - Membership function centers and sigmas
+    - Activation frequency (for large models)
+
     Args:
-        model: wytrenowany model ANFIS
-        n_memb: liczba funkcji przynależności
-        dataset: nazwa zestawu danych
-        X_train: dane treningowe (do analizy aktywacji)
+        model: trained ANFIS model
+        n_memb: number of membership functions
+        dataset: dataset name
+        X_train: training data (for the activation analysis)
     """
     model.update_weights()
     centers, sigmas = model.get_membership_functions()
@@ -519,24 +516,24 @@ def extract_and_save_rules(model, n_memb: int, dataset: str, X_train):
 # -------------------------------------------------------------
 def cross_validate_anfis(n_memb=2, batch_size=32, dataset="all", n_splits=5, epochs=10):
     """
-    Przeprowadza k-krotną walidację krzyżową modelu ANFIS.
-    
-    Używa:
-    - KFold dla regresji (concrete)
-    - StratifiedKFold dla klasyfikacji (wine)
-    
-    Każdy fold jest trenowany niezależnie, a wyniki są uśredniane.
-    Zapisuje szczegółowe wyniki każdego folda oraz średnie do JSON.
-    
+    Run k-fold cross-validation of the ANFIS model.
+
+    Uses:
+    - KFold for regression (concrete)
+    - StratifiedKFold for classification (wine)
+
+    Each fold is trained independently and the results are averaged.
+    Saves detailed results for each fold and the averages to JSON.
+
     Args:
-        n_memb: liczba funkcji przynależności
-        batch_size: rozmiar batcha
-        dataset: nazwa zestawu danych
-        n_splits: liczba foldów (domyślnie 5)
-        epochs: liczba epok treningu per fold
-        
+        n_memb: number of membership functions
+        batch_size: batch size
+        dataset: dataset name
+        n_splits: number of folds (default 5)
+        epochs: number of training epochs per fold
+
     Returns:
-        Dict z wynikami cross-validation
+        Dict with the cross-validation results
     """
     print(f"\n{'='*70}")
     print(f"CROSS-VALIDATION: {dataset}, {n_memb} MF, {n_splits}-fold")
@@ -613,7 +610,7 @@ if __name__ == "__main__":
                 if args.cv:
                     cross_validate_anfis(n_memb, args.batch_size, dataset)
             except Exception as e:
-                print(f"⚠️ Błąd dla {dataset}, {n_memb}MF: {e}")
+                print(f"⚠️ Error for {dataset}, {n_memb}MF: {e}")
 
     print("\nPODSUMOWANIE:")
     for name, res in all_results.items():

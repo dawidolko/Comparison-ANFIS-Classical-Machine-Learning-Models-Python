@@ -1,5 +1,5 @@
-# Streamlit-owy dashboard porownujacy ANFIS z klasycznymi modelami ML.
-# Obraz jest samowystarczalny: instaluje zaleznosci i serwuje aplikacje na 8501.
+# Streamlit dashboard comparing ANFIS with classical ML models.
+# The image is self-contained: it installs dependencies and serves the app on 8501.
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -7,9 +7,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Biblioteki systemowe wymagane przez matplotlib i backendy numeryczne
-# (TensorFlow linkuje libgomp). Instalowane przed kodem, zeby warstwa
-# z zaleznosciami byla cache'owana miedzy budowaniami.
+# System libraries required by matplotlib and numeric backends
+# (TensorFlow links libgomp). Installed before the code so the dependency layer
+# is cached between builds.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libgomp1 \
@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-# Uruchamianie jako uzytkownik bez uprawnien roota.
+# Run as a non-root user.
 RUN useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app
 USER appuser

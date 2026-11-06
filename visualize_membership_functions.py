@@ -9,23 +9,24 @@ import argparse
 
 def visualize_membership_functions(n_memb=2, dataset='all'):
     """
-    Wizualizuje gaussowskie funkcje przynależności dla kluczowych cech.
-    
-    Dla każdej ważnej cechy rysuje n_memb funkcji gaussowskich z wytrenowanego modelu.
-    Zakres osi X jest dostosowany do rzeczywistych wartości w danych treningowych.
-    
+    Visualize Gaussian membership functions for the key features.
+
+    For each important feature, plots n_memb Gaussian functions from the trained
+    model. The X axis range is adjusted to the actual values in the training
+    data.
+
     Args:
-        n_memb: liczba funkcji przynależności (2 lub 3)
-        dataset: nazwa zestawu ('concrete', 'all', 'red', 'white')
+        n_memb: number of membership functions (2 or 3)
+        dataset: dataset name ('concrete', 'all', 'red', 'white')
     """
-    print(f"\n📈 Wizualizacja MF: dataset={dataset}, n_memb={n_memb}")
+    print(f"\n📈 MF visualisation: dataset={dataset}, n_memb={n_memb}")
 
     model_path = f"models/anfis_{dataset}_best_{n_memb}memb.weights.h5"
     if not os.path.exists(model_path):
-        print(f"✗ Model {model_path} nie istnieje!")
+        print(f"✗ Model {model_path} does not exist!")
         return
 
-    # Ładowanie danych (dla zakresów)
+    # Load data (for the ranges)
     if dataset == "concrete":
         X_train = np.load("data/concrete-strength/X_train.npy")
         feature_names = [
@@ -40,7 +41,7 @@ def visualize_membership_functions(n_memb=2, dataset='all'):
             else:
                 X_train = np.load(f"data/X_train_{dataset}.npy")
         except Exception:
-            print(f"⚠️ Nie znaleziono danych dla {dataset}, pomijam.")
+            print(f"⚠️ No data found for {dataset}, skipping.")
             return
 
         feature_names = [
@@ -53,17 +54,17 @@ def visualize_membership_functions(n_memb=2, dataset='all'):
     n_features = X_train.shape[1]
     important_features = [f for f in important_features if f < n_features]
 
-    # Inicjalizacja i pobranie parametrów MF
+    # Initialize and read the MF parameters
     anfis_model = ANFISModel(n_input=n_features, n_memb=n_memb, batch_size=32)
     anfis_model.model.load_weights(model_path)
     anfis_model.update_weights()
     centers, sigmas = anfis_model.get_membership_functions()
 
-    # Zakres danych dynamicznie (±15% margines)
+    # Data range computed dynamically (+/-15% margin)
     mins, maxs = X_train.min(axis=0), X_train.max(axis=0)
     margins = (maxs - mins) * 0.15
 
-    # Liczba subplotów dopasowana automatycznie
+    # Number of subplots fitted automatically
     n_cols = 3
     n_rows = int(np.ceil(len(important_features) / n_cols))
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(16, 5 * n_rows))
@@ -91,7 +92,7 @@ def visualize_membership_functions(n_memb=2, dataset='all'):
         ax.grid(True, alpha=0.3)
         ax.set_ylim([-0.05, 1.05])
 
-    # Układ i zapis
+    # Layout and saving
     for j in range(len(important_features), len(axes)):
         axes[j].axis('off')
 
@@ -102,11 +103,11 @@ def visualize_membership_functions(n_memb=2, dataset='all'):
     out_path = f"results/membership_functions_{dataset}_{n_memb}memb.png"
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"✓ Zapisano wykres: {out_path}")
+    print(f"✓ Saved plot: {out_path}")
 
 
 # ===========================================================
-# GŁÓWNY BLOK
+# MAIN BLOCK
 # ===========================================================
 if __name__ == "__main__":
     os.makedirs("results", exist_ok=True)
@@ -120,6 +121,6 @@ if __name__ == "__main__":
             try:
                 visualize_membership_functions(n_memb, dataset)
             except Exception as e:
-                print(f"✗ Błąd dla dataset={dataset}, n_memb={n_memb}: {e}")
+                print(f"✗ Error for dataset={dataset}, n_memb={n_memb}: {e}")
 
-    print("\n✓ Wizualizacja MF zakończona!")
+    print("\n✓ MF visualisation finished!")

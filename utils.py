@@ -1,9 +1,9 @@
 """
-Moduł pomocniczy dla aplikacji Streamlit
+Helper module for the Streamlit app
 ----------------------------------------
-Zawiera funkcje:
- - ładowania modelu ANFIS z pliku wag
- - automatycznego wykrywania wyników modeli z katalogu results/
+Contains functions for:
+ - loading the ANFIS model from a weights file
+ - automatically detecting model results in the results/ directory
 """
 
 import os
@@ -16,31 +16,31 @@ from anfis import ANFISModel
 
 
 # =====================================================
-# 1️⃣  ŁADOWANIE MODELU ANFIS
+# 1.  LOADING THE ANFIS MODEL
 # =====================================================
 def load_anfis_model(weights_path: str) -> Optional[ANFISModel]:
     """
-    Ładuje wytrenowany model ANFIS z pliku wag.
-    
-    Automatycznie wykrywa konfigurację modelu (liczbę wejść i funkcji przynależności)
-    poprzez analizę struktury pliku HDF5.
-    
+    Load a trained ANFIS model from a weights file.
+
+    Automatically detects the model configuration (number of inputs and
+    membership functions) by analyzing the HDF5 file structure.
+
     Args:
-        weights_path: ścieżka do pliku z wagami (.h5, .weights.h5, .keras)
-        
+        weights_path: path to the weights file (.h5, .weights.h5, .keras)
+
     Returns:
-        Zrekonstruowany obiekt ANFISModel lub None w przypadku błędu
+        Reconstructed ANFISModel object, or None on error
     """
     try:
         if not os.path.exists(weights_path):
-            print(f"❌ Plik nie istnieje: {weights_path}")
+            print(f"❌ File does not exist: {weights_path}")
             return None
 
         n_input = None
         n_memb = None
 
         with h5py.File(weights_path, "r") as f:
-            # próba znalezienia parametru fuzzy_layer
+            # try to find the fuzzy_layer parameter
             for key in f.keys():
                 if "fuzzy_layer" in key:
                     grp = f[key]
@@ -51,7 +51,7 @@ def load_anfis_model(weights_path: str) -> Optional[ANFISModel]:
                         n_memb, n_input = grp["sigma:0"].shape
                         break
 
-            # fallback — często w custom layers
+            # fallback - often in custom layers
             if n_input is None:
                 for name in f.keys():
                     if "layer_with_weights" in name.lower():
@@ -65,46 +65,46 @@ def load_anfis_model(weights_path: str) -> Optional[ANFISModel]:
                             pass
 
         if n_input is None or n_memb is None:
-            print(f"⚠️ Nie udało się wykryć n_input/n_memb w {weights_path}")
+            print(f"⚠️ Could not detect n_input/n_memb in {weights_path}")
             return None
 
-        print(f"✓ Wykryto konfigurację: n_input={n_input}, n_memb={n_memb}")
+        print(f"✓ Detected configuration: n_input={n_input}, n_memb={n_memb}")
         model = ANFISModel(n_input=int(n_input), n_memb=int(n_memb))
         _ = model.model(tf.zeros((1, int(n_input)), dtype=tf.float32))
         model.model.load_weights(weights_path)
-        print(f"✓ Załadowano model z {weights_path}")
+        print(f"✓ Loaded model from {weights_path}")
         return model
 
     except Exception as e:
-        print(f"❌ Błąd podczas ładowania ANFIS: {e}")
+        print(f"❌ Error loading ANFIS: {e}")
         import traceback
         traceback.print_exc()
         return None
 
 
 # =====================================================
-# 2️⃣  ŁADOWANIE WYNIKÓW
+# 2.  LOADING RESULTS
 # =====================================================
 def load_results() -> Dict[str, Any]:
     """
-    Ładuje wyniki wszystkich wytrenowanych modeli z katalogu results/.
-    
-    Obsługuje:
-    - Modele ANFIS (klasyfikacja wine + regresja concrete)
-    - Modele porównawcze (Neural Network, SVM, Random Forest)
-    
-    Wyniki są wczytywane z plików JSON i zwracane jako słownik.
-    
+    Load the results of all trained models from the results/ directory.
+
+    Supports:
+    - ANFIS models (wine classification + concrete regression)
+    - Comparison models (Neural Network, SVM, Random Forest)
+
+    Results are read from JSON files and returned as a dict.
+
     Returns:
-        Dict[nazwa_modelu, dane_json] - słownik z wynikami wszystkich modeli
+        Dict[model_name, json_data] - dict with the results of all models
     """
     results = {}
     base_dir = "results"
     if not os.path.exists(base_dir):
-        print("⚠️ Brak katalogu results/")
+        print("⚠️ Missing results/ directory")
         return results
 
-    # ręczne przypisania (dla kompatybilności GUI)
+    # manual assignments (for GUI compatibility)
     manual_map = {
         "ANFIS (2 funkcje)": "anfis_all_2memb_results.json",
         "ANFIS (3 funkcje)": "anfis_all_3memb_results.json",
@@ -115,7 +115,6 @@ def load_results() -> Dict[str, Any]:
         "Random Forest": "rf_results.json"
     }
 
-    # sprawdzenie wszystkich wpisów
     for name, filename in manual_map.items():
         path = os.path.join(base_dir, filename)
         if os.path.exists(path):
@@ -123,9 +122,9 @@ def load_results() -> Dict[str, Any]:
                 with open(path, "r") as f:
                     results[name] = json.load(f)
             except Exception as e:
-                print(f"⚠️ Błąd przy wczytywaniu {filename}: {e}")
+                print(f"⚠️ Error loading {filename}: {e}")
 
-    # autodiscover wszystkich wyników anfis_*.json
+    # autodiscover all anfis_*.json results
     for fn in os.listdir(base_dir):
         if fn.startswith("anfis_") and fn.endswith(".json"):
             full = os.path.join(base_dir, fn)
@@ -137,5 +136,5 @@ def load_results() -> Dict[str, Any]:
             except Exception:
                 pass
 
-    print(f"✓ Załadowano {len(results)} zestawów wyników.")
+    print(f"✓ Loaded {len(results)} result sets.")
     return results

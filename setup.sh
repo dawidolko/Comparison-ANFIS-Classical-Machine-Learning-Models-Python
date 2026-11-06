@@ -5,16 +5,14 @@ echo "======================================"
 echo "SETUP: Environment & Data Generation"
 echo "======================================"
 
-# Utworzono środowisko wirtualne, jeśli nie istnieje
+# Create the virtual environment if it does not exist
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
     python3 -m venv venv
 fi
 
-# Aktywacja środowiska wirtualnego
 source venv/bin/activate
 
-# Instalacja zależności
 echo "Installing dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt

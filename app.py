@@ -5,23 +5,23 @@ from PIL import Image
 import pandas as pd
 
 # -------------------------------------------------------------
-# Konfiguracja aplikacji
+# Application configuration
 # -------------------------------------------------------------
 st.set_page_config(page_title="ANFIS Comparison", page_icon="🤖", layout="wide")
 
 
 # -------------------------------------------------------------
-# Funkcje pomocnicze
+# Helper functions
 # -------------------------------------------------------------
 def load_json_safe(path: str):
     """
-    Bezpiecznie wczytuje plik JSON.
-    
+    Safely load a JSON file.
+
     Args:
-        path: ścieżka do pliku JSON
-        
+        path: path to the JSON file
+
     Returns:
-        Dict z danymi lub None w przypadku błędu lub braku pliku
+        Dict with the data, or None on error or if the file is missing
     """
     if os.path.exists(path):
         try:
@@ -34,14 +34,14 @@ def load_json_safe(path: str):
 
 def display_image_if_exists(path: str, caption: str = None):
     """
-    Wyświetla obrazek w Streamlit jeśli plik istnieje.
-    
+    Show an image in Streamlit if the file exists.
+
     Args:
-        path: ścieżka do pliku graficznego
-        caption: opcjonalny podpis pod obrazkiem
-        
+        path: path to the image file
+        caption: optional caption under the image
+
     Returns:
-        True jeśli obrazek został wyświetlony, False w przeciwnym razie
+        True if the image was shown, False otherwise
     """
     if os.path.exists(path):
         st.image(Image.open(path), use_column_width=True, caption=caption)
@@ -50,17 +50,17 @@ def display_image_if_exists(path: str, caption: str = None):
 
 
 # -------------------------------------------------------------
-# Strona główna
+# Home page
 # -------------------------------------------------------------
 def show_home():
     """
-    Wyświetla stronę główną aplikacji Streamlit.
-    
-    Zawiera:
-    - Opis projektów (Wine Quality, Concrete Strength)
-    - Architekturę modelu ANFIS
-    - Informacje o preprocessingu
-    - Porównywane modele
+    Show the home page of the Streamlit app.
+
+    Contains:
+    - Project descriptions (Wine Quality, Concrete Strength)
+    - ANFIS model architecture
+    - Preprocessing information
+    - Compared models
     """
     st.title("🤖 ANFIS - Adaptive Neuro-Fuzzy Inference System")
     st.markdown("### Porównanie ANFIS z klasycznymi metodami ML")
@@ -112,7 +112,7 @@ def show_home():
 
 
 # -------------------------------------------------------------
-# Sekcja wyników ANFIS
+# ANFIS results section
 # -------------------------------------------------------------
 def show_anfis_results():
     st.title("📊 ANFIS — Wyniki Treningu")
@@ -131,18 +131,16 @@ def show_anfis_results():
     with col3:
         n_memb = st.selectbox("Liczba funkcji przynależności:", [2, 3], key="n_memb")
     with col4:
-        # Wine: 11 featurów, Concrete: 8 featurów → liczba reguł = n_memb^features
+        # Wine: 11 features, Concrete: 8 features -> number of rules = n_memb^features
         n_features = 11 if dataset != "concrete" else 8
         n_rules = n_memb ** n_features
         st.metric("Liczba reguł", f"{n_rules:,}".replace(",", " "))
 
-    # Ścieżki do plików
     results_file = f"results/anfis_{dataset}_{n_memb}memb_results.json"
     cv_file = f"results/anfis_{dataset}_{n_memb}memb_cv.json"
     train_img = f"results/anfis_{dataset}_{n_memb}memb_training.png"
     mf_img = f"results/membership_functions_{dataset}_{n_memb}memb.png"
 
-    # Rodzaj zadania
     is_classification = (dataset != "concrete")
 
     if is_classification:
@@ -154,7 +152,6 @@ def show_anfis_results():
         fit_title = "📊 Diagnostyka modelu (zbiór treningowy)"
         report_file = None
 
-    # Ładowanie wyników
     results = load_json_safe(results_file)
     if not results:
         st.warning(f"⚠ Brak wyników dla dataset={dataset}, n_memb={n_memb}")
@@ -182,7 +179,7 @@ def show_anfis_results():
     st.subheader(fit_title)
     display_image_if_exists(fit_img)
 
-    # Wyświetl raport tekstowy dla klasyfikacji
+    # Show the text report for classification
     if is_classification and report_file and os.path.exists(report_file):
         with st.expander("📝 Szczegółowy raport klasyfikacyjny (trening)"):
             with open(report_file, "r") as f:
@@ -214,7 +211,7 @@ def show_anfis_results():
 
 
 # -------------------------------------------------------------
-# Sekcja reguł ANFIS
+# ANFIS rules section
 # -------------------------------------------------------------
 def show_rules():
     st.title("📜 Reguły ANFIS i Historia Uczenia")
@@ -286,7 +283,7 @@ def show_rules():
 
 
 # -------------------------------------------------------------
-# Sekcja porównania modeli
+# Model comparison section
 # -------------------------------------------------------------
 def show_comparison():
     st.title("📊 Porównanie Modeli")
@@ -303,7 +300,7 @@ def show_comparison():
 
 
 # -------------------------------------------------------------
-# Analiza danych
+# Data analysis
 # -------------------------------------------------------------
 def show_data_analysis():
     st.title("📈 Analiza Danych")
@@ -330,7 +327,7 @@ def show_data_analysis():
             "results/concrete_pairplot.png"                  
         ]
 
-    # --- wyświetlanie wykresów ---
+    # --- plot display ---
     missing = []
     for img_path in imgs:
         if os.path.exists(img_path):
@@ -338,7 +335,7 @@ def show_data_analysis():
             display_image_if_exists(img_path)
         else:
             missing.append(img_path)
-            print(f"[WARN] Brak pliku wykresu: {img_path}")  # log do konsoli
+            print(f"[WARN] Missing plot file: {img_path}")  # log do konsoli
 
     if missing:
         st.warning(f"Brakuje {len(missing)} wykresów: {', '.join(os.path.basename(m) for m in missing)}")
@@ -346,7 +343,7 @@ def show_data_analysis():
 
 
 # -------------------------------------------------------------
-# Nawigacja główna
+# Main navigation
 # -------------------------------------------------------------
 def main():
     st.sidebar.title("📂 Nawigacja")

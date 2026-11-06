@@ -9,7 +9,7 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      # Wyniki i wykresy maja przezyc restart kontenera.
+      # Results and plots must survive a container restart.
       - ../../results:/app/results
       - ../../data:/app/data:ro
     environment:
