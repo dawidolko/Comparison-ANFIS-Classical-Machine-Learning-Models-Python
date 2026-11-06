@@ -53,6 +53,12 @@ Input ─▶ FuzzyLayer          membership degrees per feature (Gaussian, learn
 
 ---
 
+## 🎬 Demo
+
+[![Watch the demo on YouTube](https://img.youtube.com/vi/O3X3MsWPVi8/hqdefault.jpg)](https://youtu.be/O3X3MsWPVi8)
+
+---
+
 ## 🛠️ Technology Stack
 
 | Technology       | Version | Role                                                      |
